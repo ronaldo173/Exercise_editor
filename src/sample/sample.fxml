@@ -24,6 +24,17 @@
                                 <MenuItem mnemonicParsing="false" text="Choose font" onAction="#onClickChoseFontDialog"/>
                             </items>
                         </Menu>
+                        <Menu mnemonicParsing="false" text="Encoding">
+                            <fx:define>
+                                <ToggleGroup fx:id="toggleGroupMenuCheckEncode"/>
+                            </fx:define>
+                            <items>
+                                <RadioMenuItem text="UTF-8" selected="true" toggleGroup="$toggleGroupMenuCheckEncode"/>
+                                <RadioMenuItem text="UNICODE (UTF-16)" toggleGroup="$toggleGroupMenuCheckEncode"/>
+
+                            </items>
+                        </Menu>
+
                         <Menu mnemonicParsing="false" text="Help">
                             <items>
                                 <MenuItem mnemonicParsing="false" onAction="#onClickAbout" text="About"/>
@@ -40,7 +51,8 @@
                         </HBox>
                     </top>
                     <center>
-                        <TableView fx:id="tableView" editable="true" prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER">
+                        <TableView fx:id="tableView" editable="true" prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER"
+                        >
                             <columns>
                                 <TableColumn prefWidth="75.0" text="Key"/>
                                 <TableColumn prefWidth="75.0" text="Exercise"/>

@@ -15,6 +15,7 @@ public class ExerciseChild extends Exercises {
     private SimpleStringProperty Ukraine;
     private SimpleStringProperty French;
     private SimpleStringProperty Georgian;
+    private SimpleStringProperty fileResult;
 
     public ExerciseChild(String key, String s, String s1, String s2, String s3) {
         this.key = new SimpleStringProperty(key);
@@ -24,7 +25,7 @@ public class ExerciseChild extends Exercises {
         this.Ukraine = new SimpleStringProperty(s3);
     }
 
-    public ExerciseChild(String key, List<String> entryValue, List<String> nameColumns) {
+    public ExerciseChild(String key, List<String> entryValue, List<String> nameColumns, String resultName) {
         this.key = new SimpleStringProperty(key);
 
 
@@ -51,10 +52,9 @@ public class ExerciseChild extends Exercises {
                     break;
                 default:
                     System.out.println("unknown name");
-
             }
         }
-
+        this.fileResult = new SimpleStringProperty(resultName);
     }
 
     @Override
@@ -113,5 +113,13 @@ public class ExerciseChild extends Exercises {
 
     public SimpleStringProperty georgianProperty() {
         return Georgian;
+    }
+
+    public String getFileResult() {
+        return fileResult.get();
+    }
+
+    public SimpleStringProperty fileResultProperty() {
+        return fileResult;
     }
 }

@@ -20,6 +20,7 @@ import javafx.scene.text.Font;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import org.controlsfx.dialog.FontSelectorDialog;
 
 import java.io.*;
 import java.net.URL;
@@ -33,6 +34,8 @@ public class Controller implements Initializable {
     private HBox hBoxForRBut;
     @FXML
     private ToggleGroup toggleGroup;
+    @FXML
+    private ToggleGroup toggleGroupMenuCheckEncode;
     private File choosenDirectory;
     private File standartPathTODir;
     private File[] files;
@@ -44,10 +47,14 @@ public class Controller implements Initializable {
     public void initialize(URL location, ResourceBundle resources) {
         standartPathTODir = new File(new File(".").getAbsolutePath() + "\\resources\\languages");
 
-        getFileNames();
-        List<RadioButton> rButtonList = initRadioBottoms();
-        initTable("Ukraine");
-        setOnEditTableCol("Ukraine");
+        getFileNames(standartPathTODir);
+        initRadioBottoms();
+        try {
+            initTable("Ukraine");
+            setOnEditTableCol("Ukraine");
+        } catch (Exception e) {
+            System.out.println("no Ukraine file");
+        }
 
         toggleGroup.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
             @Override
@@ -57,6 +64,15 @@ public class Controller implements Initializable {
                 System.out.println(nameOfRButt);
                 initTable(nameOfRButt);
                 setOnEditTableCol(nameOfRButt);
+            }
+        });
+
+        toggleGroupMenuCheckEncode.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
+            @Override
+            public void changed(ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle newValue) {
+                if (toggleGroupMenuCheckEncode.getSelectedToggle() != null) {
+                    System.out.println(toggleGroupMenuCheckEncode.getSelectedToggle().toString());
+                }
             }
         });
     }
@@ -92,7 +108,7 @@ public class Controller implements Initializable {
     private void setPropToFile(File file, String key, String newValue) {
 
         Properties properties = new Properties();
-        try (FileReader reader = new FileReader(file);
+        try (FileReader reader = new FileReader(file)
         ) {
 
             properties.load(reader);
@@ -190,12 +206,20 @@ public class Controller implements Initializable {
 
     private void setColumns(List<TableColumn<Exercises, String>> tableColumnList) {
         nameColList.clear();
-        for (TableColumn<Exercises, String> column : tableColumnList) {
-            String nameCol = column.getUserData().toString();
-            nameCol = nameCol.substring(nameCol.lastIndexOf("\\") + 1, nameCol.lastIndexOf("."));
-            nameColList.add(nameCol);
-            column.setCellValueFactory(new PropertyValueFactory<Exercises, String>(nameCol));
+        for (int i = 0; i < tableColumnList.size(); i++) {
+            TableColumn<Exercises, String> tableColumn = tableColumnList.get(i);
+            String nameCol = tableColumn.getUserData().toString();
+
+            if (i != tableColumnList.size() - 1) {
+                nameCol = nameCol.substring(nameCol.lastIndexOf("\\") + 1, nameCol.lastIndexOf("."));
+                nameColList.add(nameCol);
+            } else {
+                //TODO FOR LAST COL
+//                nameColList.add(nameCol);
+            }
+            tableColumn.setCellValueFactory(new PropertyValueFactory<Exercises, String>(nameCol));
         }
+
     }
 
     private ObservableList<Exercises> getExercicesFewFile(List<TableColumn<Exercises, String>> tableColumnList) {
@@ -205,7 +229,8 @@ public class Controller implements Initializable {
         setColumns(tableColumnList);
 
 
-        for (TableColumn<Exercises, String> column : tableColumnList) {
+        for (int i = 0; i < tableColumnList.size() - 1; i++) {
+            TableColumn<Exercises, String> column = tableColumnList.get(i);
             String fileName = (String) column.getUserData();
             Map<String, String> dataFromProp = null;
 
@@ -216,25 +241,24 @@ public class Controller implements Initializable {
             }
 
             for (Map.Entry<String, String> entry : dataFromProp.entrySet()) {
-                if (!mapAll.containsKey(entry.getKey())) {
+                String key = entry.getKey();
 
-                    mapAll.put(entry.getKey(), new ArrayList<String>() {{
+                if (!mapAll.containsKey(key)) {
+                    mapAll.put(key, new ArrayList<String>() {{
                         add(entry.getValue());
                     }});
                 } else {
-                    mapAll.get(entry.getKey()).add(entry.getValue());
+                    mapAll.get(key).add(entry.getValue());
                 }
             }
         }
+        //TODO add file results if exists
 
         for (Map.Entry<String, List<String>> entry : mapAll.entrySet()) {
-
-//            exercises.add(new ExerciseChild(entry.getKey(), entry.getValue().get(0),
-//                    entry.getValue().get(1), entry.getValue().get(2), entry.getValue().get(3)));
-            exercises.add(new ExerciseChild(entry.getKey(), entry.getValue(), nameColList));
+            String resultName = "-";
+            exercises.add(new ExerciseChild(entry.getKey(), entry.getValue(), nameColList, resultName));
         }
         System.out.println("cols: " + nameColList);
-        System.out.println("cols: " + mapAll.get("Exercise0"));
         return exercises;
     }
 
@@ -266,9 +290,16 @@ public class Controller implements Initializable {
         tableView.getColumns().clear();
         tableView.getColumns().add(keyColumn);
 
+
         if (!lang.equalsIgnoreCase("all")) {
             valueColumn = new TableColumn<>(lang);
+            for (File file : files) {
+                if (file.toString().substring(0, file.toString().lastIndexOf(".")).endsWith(lang)) {
+                    valueColumn.setText(file.getAbsolutePath());
+                }
+            }
             tableView.getColumns().add(valueColumn);
+
         } else {
 
             for (File file : files) {
@@ -276,6 +307,10 @@ public class Controller implements Initializable {
                 column.setUserData(file.getAbsolutePath());
                 tableColumnList.add(column);
             }
+            TableColumn<Exercises, String> myLastCol = new TableColumn<>("file Result");
+            myLastCol.setUserData("fileResult");
+            tableColumnList.add(myLastCol); //add tablecolumn for result files
+
             for (TableColumn<Exercises, String> column : tableColumnList) {
                 tableView.getColumns().add(column);
             }
@@ -294,36 +329,65 @@ public class Controller implements Initializable {
         choosenDirectory = chooser.showDialog(null);
         System.out.println("Choosen dir: " + choosenDirectory);
 
-        if (choosenDirectory == null || !choosenDirectory.equals(standartPathTODir)) {
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Информация о выбранной папке");
-            alert.setHeaderText(null);
-            alert.setContentText("Работаем с файлами из текущей директории проекта");
+        if (choosenDirectory == null) {
 
-            alert.showAndWait();
+            showInformationAlert("Информация о выбранной папке", "Работаем с текущими файлами");
+        } else {
+            this.files = choosenDirectory.listFiles(getFileFilter("properties"));
+            initNewFiles();
+
         }
+    }
+
+    private void initNewFiles() {
+        hBoxForRBut.getChildren().clear();
+        List<RadioButton> buttonList = initRadioBottoms();
+        buttonList.get(0).setSelected(true);
     }
 
     @FXML
     public void onClickChooseFile() {
-        System.out.println("file choose");
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Choose files");
 
-        List<File> files = fileChooser.showOpenMultipleDialog(null);
-        System.out.println(files);
-        if (files!=null) {
-            for (File file : files) {
-                System.out.println(file);
-            }
+        List<File> filesChoosen = fileChooser.showOpenMultipleDialog(null);
+        System.out.println(filesChoosen);
+
+        if (filesChoosen == null) {
+            showInformationAlert("Файлы не выбраны", "Работаю со старыми файлами");
+        } else {
+
+            this.files = filesChoosen.toArray(new File[filesChoosen.size()]);
+            initNewFiles();
         }
+    }
+
+    private void showInformationAlert(String title, String text) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(text);
+
+        alert.showAndWait();
     }
 
     @FXML
     public void onClickChoseFontDialog() {
-        FontChooser2 fontChooser2 = new FontChooser2(null);
-        fontChooser2.show();
 
+        FontSelectorDialog fontSelectorDialog = new FontSelectorDialog(Font.font(14));
+        fontSelectorDialog.showAndWait();
+        Font resultFont = fontSelectorDialog.getResult();
+
+        if (resultFont != null) {
+            double size = resultFont.getSize();
+            String family = resultFont.getFamily();
+            System.out.println(resultFont);
+//            tableView.setStyle("-fx-font-style: " +  style );
+            tableView.setStyle("-fx-font-size: " + size);
+            for (TableColumn<Exercises, ?> column : tableView.getColumns()) {
+                column.setStyle("-fx-font-family: " + "'" + family + "'");
+            }
+        }
     }
 
     @FXML
@@ -338,7 +402,6 @@ public class Controller implements Initializable {
         alert.setTitle("About");
         alert.setHeaderText("Создано на ХКБМ МОРОЗОВА");
         alert.setContentText("Приложения для работы с интернационализацией тренажера");
-
         alert.showAndWait();
     }
 
@@ -349,16 +412,9 @@ public class Controller implements Initializable {
 
     }
 
-    private void getFileNames() {
-        FileFilter fileFilter = new FileFilter() {
-            @Override
-            public boolean accept(File pathname) {
-                if (!pathname.isDirectory() && pathname.toString().endsWith(".properties")) {
-                    return true;
-                }
-                return false;
-            }
-        };
+    private void getFileNames(File standartPathTODir) {
+        String typeOfFile = "properties";
+        FileFilter fileFilter = getFileFilter(typeOfFile);
 
         try {
             files = standartPathTODir.listFiles(fileFilter);
@@ -369,8 +425,20 @@ public class Controller implements Initializable {
         } catch (Exception e) {
             onClickChooseDir();
             standartPathTODir = choosenDirectory;
-            getFileNames();
+            getFileNames(standartPathTODir);
         }
+    }
+
+    private FileFilter getFileFilter(String type) {
+        return new FileFilter() {
+            @Override
+            public boolean accept(File pathname) {
+                if (!pathname.isDirectory() && pathname.toString().endsWith("." + type)) {
+                    return true;
+                }
+                return false;
+            }
+        };
     }
 
     private List<RadioButton> initRadioBottoms() {
@@ -388,10 +456,13 @@ public class Controller implements Initializable {
                 radioButton.setSelected(true);
             }
         }
-        RadioButton radioButtonAll = new RadioButton("All");
-        radioButtonAll.setUserData("All");
-        buttonList.add(radioButtonAll);
-        hBoxForRBut.getChildren().add(radioButtonAll);
+
+        if (files.length > 1) {
+            RadioButton radioButtonAll = new RadioButton("All");
+            radioButtonAll.setUserData("All");
+            buttonList.add(radioButtonAll);
+            hBoxForRBut.getChildren().add(radioButtonAll);
+        }
 
         for (RadioButton button : buttonList) {
             button.setPadding(new Insets(10, 30, 10, 0));

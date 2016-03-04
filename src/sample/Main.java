@@ -23,7 +23,7 @@ public class Main extends Application {
         Image image = new Image(new FileInputStream(file));
         primaryStage.getIcons().add(image);
         primaryStage.setTitle("Exercise editor");
-        primaryStage.setScene(new Scene(root, 800, 600));
+        primaryStage.setScene(new Scene(root, 1200, 600));
         primaryStage.show();
     }
 }
