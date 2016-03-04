@@ -42,6 +42,8 @@ public class Controller implements Initializable {
     private TableColumn<Exercises, String> valueColumn;
     private TableColumn<Exercises, String> keyColumn = new TableColumn<>("Key");
     private List<TableColumn<Exercises, String>> tableColumnList = new ArrayList<>();
+    private String pathToLessonsStandart = "C:\\Users\\Developer\\AppData\\Roaming\\KhMBDB\\BTR4E\\IWP\\Lessons\\";
+    private String pathToLessons = pathToLessonsStandart;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -201,6 +203,7 @@ public class Controller implements Initializable {
         tableView.getSortOrder().add(tableView.getColumns().get(0));
         for (TableColumn<Exercises, ?> column : tableView.getColumns()) {
             column.setSortable(false);
+            column.setStyle("-fx-alignment: CENTER;");
         }
     }
 
@@ -213,9 +216,6 @@ public class Controller implements Initializable {
             if (i != tableColumnList.size() - 1) {
                 nameCol = nameCol.substring(nameCol.lastIndexOf("\\") + 1, nameCol.lastIndexOf("."));
                 nameColList.add(nameCol);
-            } else {
-                //TODO FOR LAST COL
-//                nameColList.add(nameCol);
             }
             tableColumn.setCellValueFactory(new PropertyValueFactory<Exercises, String>(nameCol));
         }
@@ -227,7 +227,6 @@ public class Controller implements Initializable {
         ObservableList<Exercises> exercises = FXCollections.observableArrayList();
         Map<String, List<String>> mapAll = new HashMap<>();
         setColumns(tableColumnList);
-
 
         for (int i = 0; i < tableColumnList.size() - 1; i++) {
             TableColumn<Exercises, String> column = tableColumnList.get(i);
@@ -252,14 +251,50 @@ public class Controller implements Initializable {
                 }
             }
         }
-        //TODO add file results if exists
+
+        // map with exercise name - file result
+
+        Map<String, File> resultFilesMap = getResultFiles(mapAll.keySet(), pathToLessons);
 
         for (Map.Entry<String, List<String>> entry : mapAll.entrySet()) {
             String resultName = "-";
+            if (resultFilesMap.containsKey(entry.getKey())) {
+                resultName = resultFilesMap.get(entry.getKey()).getName();
+            }
             exercises.add(new ExerciseChild(entry.getKey(), entry.getValue(), nameColList, resultName));
         }
         System.out.println("cols: " + nameColList);
         return exercises;
+    }
+
+    private Map<String, File> getResultFiles(Set<String> keys, String path) {
+
+        Map map = new HashMap<>();
+        File file = new File(path);
+        FileFilter fileFilter = getFileFilter("rtg");
+
+        while (file == null || !file.exists() || !file.isDirectory()
+                || file.listFiles(fileFilter).length == 0) {
+            showInformationAlert("Error", "Need to choose directory with RESULT files: ...Lessons");
+
+            file = getChoosenDirectory();
+            pathToLessons = file.getAbsolutePath();
+            System.out.println("Choosen dir: " + file);
+        }
+
+        File[] files = file.listFiles(fileFilter);
+        List<File> filesRes = new ArrayList<>(Arrays.asList(files));
+
+        for (File fileWithRes : filesRes) {
+            String fileName = fileWithRes.getName();
+            String substringWithoutType = fileName.substring(0, fileName.lastIndexOf("."));
+
+            if (keys.contains(substringWithoutType)) {
+                map.put(substringWithoutType, fileWithRes);
+            }
+        }
+
+        return map;
     }
 
     private ObservableList<Exercises> getExercicesOneFile(String langName) {
@@ -307,7 +342,7 @@ public class Controller implements Initializable {
                 column.setUserData(file.getAbsolutePath());
                 tableColumnList.add(column);
             }
-            TableColumn<Exercises, String> myLastCol = new TableColumn<>("file Result");
+            TableColumn<Exercises, String> myLastCol = new TableColumn<>("file with results");
             myLastCol.setUserData("fileResult");
             tableColumnList.add(myLastCol); //add tablecolumn for result files
 
@@ -321,12 +356,26 @@ public class Controller implements Initializable {
         tableView.getItems().clear();
     }
 
-    @FXML
-    public void onClickChooseDir() {
+    private File getChoosenDirectory() {
         DirectoryChooser chooser = new DirectoryChooser();
         chooser.setInitialDirectory(standartPathTODir);
+        return chooser.showDialog(null);
+    }
 
-        choosenDirectory = chooser.showDialog(null);
+    public void onClickChooseDirLessons(ActionEvent actionEvent) {
+
+        File choosenDirectory = getChoosenDirectory();
+        if (choosenDirectory == null) {
+            showInformationAlert("Alert", "Don't choose directory for lessons, work with standart.");
+        } else {
+            pathToLessons = choosenDirectory.getAbsolutePath();
+            initNewFiles();
+        }
+    }
+
+    @FXML
+    public void onClickChooseDir() {
+        choosenDirectory = getChoosenDirectory();
         System.out.println("Choosen dir: " + choosenDirectory);
 
         if (choosenDirectory == null) {
@@ -335,7 +384,6 @@ public class Controller implements Initializable {
         } else {
             this.files = choosenDirectory.listFiles(getFileFilter("properties"));
             initNewFiles();
-
         }
     }
 
@@ -364,6 +412,14 @@ public class Controller implements Initializable {
 
     private void showInformationAlert(String title, String text) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
+
+        try {
+            File file = new File("resources/main2.png");
+            Image image = new Image(new FileInputStream(file));
+            ((Stage) alert.getDialogPane().getScene().getWindow()).getIcons().add(image);
+        } catch (FileNotFoundException e) {
+            System.out.println("no icon");
+        }
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(text);
@@ -471,4 +527,6 @@ public class Controller implements Initializable {
         }
         return buttonList;
     }
+
+
 }

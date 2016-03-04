@@ -11,13 +11,16 @@
             <children>
                 <MenuBar VBox.vgrow="ALWAYS">
                     <menus>
-                        <Menu mnemonicParsing="false" text="File">
+                        <Menu mnemonicParsing="false" text="Languages files...">
                             <items>
                                 <MenuItem mnemonicParsing="false" onAction="#onClickChooseDir" text="Choose directory..."/>
                                 <MenuItem mnemonicParsing="false" onAction="#onClickChooseFile" text ="Choose files..."/>
                                 <SeparatorMenuItem mnemonicParsing="false"/>
                                 <MenuItem mnemonicParsing="false" text="Exit" onAction="#onClickExit"/>
                             </items>
+                        </Menu>
+                        <Menu text="Lessons files...">
+                            <MenuItem mnemonicParsing="false" onAction="#onClickChooseDirLessons" text="Choose directory..."/>
                         </Menu>
                         <Menu mnemonicParsing="false" text="Fonts">
                             <items>
@@ -52,7 +55,7 @@
                     </top>
                     <center>
                         <TableView fx:id="tableView" editable="true" prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER"
-                        >
+                         >
                             <columns>
                                 <TableColumn prefWidth="75.0" text="Key"/>
                                 <TableColumn prefWidth="75.0" text="Exercise"/>
