@@ -24,6 +24,7 @@ import org.controlsfx.dialog.FontSelectorDialog;
 
 import java.io.*;
 import java.net.URL;
+import java.nio.file.Files;
 import java.util.*;
 
 public class Controller implements Initializable {
@@ -36,6 +37,8 @@ public class Controller implements Initializable {
     private ToggleGroup toggleGroup;
     @FXML
     private ToggleGroup toggleGroupMenuCheckEncode;
+    @FXML
+    private RadioMenuItem rButtEncodeUTF8;
     private File choosenDirectory;
     private File standartPathTODir;
     private File[] files;
@@ -44,6 +47,7 @@ public class Controller implements Initializable {
     private List<TableColumn<Exercises, String>> tableColumnList = new ArrayList<>();
     private String pathToLessonsStandart = "C:\\Users\\Developer\\AppData\\Roaming\\KhMBDB\\BTR4E\\IWP\\Lessons\\";
     private String pathToLessons = pathToLessonsStandart;
+    private String typeOfFile = "cfg";
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -74,57 +78,85 @@ public class Controller implements Initializable {
             public void changed(ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle newValue) {
                 if (toggleGroupMenuCheckEncode.getSelectedToggle() != null) {
                     System.out.println(toggleGroupMenuCheckEncode.getSelectedToggle().toString());
+
+                    if (newValue == rButtEncodeUTF8) {
+                        LoadDataFromPropToView.setEncoding("UTF-8");
+                    } else {
+                        LoadDataFromPropToView.setEncoding("UTF-16");
+                    }
                 }
             }
         });
     }
 
     private void setOnEditTableCol(String nameLang) {
-        if (true) {
-            TableColumn<Exercises, String> exercisesTableColumn = (TableColumn<Exercises, String>) tableView.getColumns().get(1);
-            exercisesTableColumn.setOnEditCommit(new EventHandler<TableColumn.CellEditEvent<Exercises, String>>() {
-                @Override
-                public void handle(TableColumn.CellEditEvent<Exercises, String> string) {
+        int numOfCol = nameLang.equalsIgnoreCase("all") ? 0 : 1;
+        System.out.println("nameLang..." + nameLang + "numOfCol..." + numOfCol);
+        TableColumn<Exercises, String> exercisesTableColumn = (TableColumn<Exercises, String>) tableView.getColumns().get(numOfCol);
+        exercisesTableColumn.setOnEditCommit(new EventHandler<TableColumn.CellEditEvent<Exercises, String>>() {
+            @Override
+            public void handle(TableColumn.CellEditEvent<Exercises, String> string) {
+
+                if (numOfCol == 1) {
                     (string.getTableView().getItems().get(string.getTablePosition().getRow())).setValue(string.getNewValue());
                     String key = string.getRowValue().getKey();
                     String newValue = string.getNewValue();
                     System.out.println("new val is: " + newValue + " . key is: " + key);
-
                     for (File file : files) {
                         if (file.getName().startsWith(nameLang)) {
-                            setPropToFile(file, key, newValue);
+                            LoadDataFromPropToView.setPropToFile(file, key, newValue);
                         }
                     }
+                } else {
+                    System.out.println("\nedit all");
+                    String oldKey = string.getOldValue();
+                    String newKey = string.getNewValue();
+                    System.out.println("new val is: " + newKey + " . old is: " + oldKey);
+                    List<File> tempFilesList = new ArrayList<>(Arrays.asList(files));
+                    List<File> tempLessonListToRenaime = null;
+                    //files for change key
+                    for (File file : tempFilesList) {
+                        System.out.println(file);
+                    }
+
+                    //files for rename
+                    File[] lessonFiles = (new File(pathToLessonsStandart)).listFiles(new FileFilter() {
+                        @Override
+                        public boolean accept(File pathname) {
+                            if (pathname.getName().startsWith(oldKey + ".")) {
+                                return true;
+                            }
+                            return false;
+                        }
+                    });
+                    tempLessonListToRenaime = Arrays.asList(lessonFiles);
+                    for (File lessonFile : lessonFiles) {
+                        String typeOfLessonFile = lessonFile.getName().substring(lessonFile.getName().lastIndexOf("."));
+                        String newFileName = newKey.toString() + typeOfLessonFile;
+                        System.out.println("old-" + lessonFile);
+                        System.out.println("new-" + newFileName);
+//
+                        try {
+                            Files.move(lessonFile.toPath(), lessonFile.toPath().resolveSibling(newFileName));
+                        } catch (IOException e) {
+                            showInformationAlert("Can't rename", "file: " + lessonFile + "\n to:\n" + newKey);
+                            continue;
+                        }
+
+                    }
+                    //set text info about renaime
+                    String alertInfoTextWereRenaimed = tempLessonListToRenaime.size() == 0 ? "No files were renaimed" :
+                            "Were renaimed: " + tempLessonListToRenaime;
+                    showInformationAlert("Renamed:", alertInfoTextWereRenaimed);
+
+                    //change key in all prop files
+                    LoadDataFromPropToView.changeKeyInAllFiles(tempFilesList, oldKey, newKey);
+
                 }
-            });
-        }
-    }
-
-    /**
-     * to set value in file by key and file name
-     *
-     * @param file
-     * @param key
-     * @param newValue
-     */
-    private void setPropToFile(File file, String key, String newValue) {
-
-        Properties properties = new Properties();
-        try (FileReader reader = new FileReader(file)
-        ) {
-
-            properties.load(reader);
-            properties.setProperty(key, newValue);
-
-            try (FileWriter writer = new FileWriter(file)) {
-                properties.store(writer, null);
             }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        });
     }
+
 
     /**
      * show table by name of language or 'all' languages
@@ -191,15 +223,15 @@ public class Controller implements Initializable {
             valueColumn.setCellValueFactory(new PropertyValueFactory<Exercises, String>("value"));
             valueColumn.setCellFactory(TextFieldTableCell.forTableColumn());
             data = getExercicesOneFile(langName);
-            tableView.setItems(data);
         } else {
             printColNames("all");
             setColumns(tableColumnList);
             data = getExercicesFewFile(tableColumnList);
 
-            tableView.setItems(data);
-
+            //now make first column editable with saving to all files
+            keyColumn.setCellFactory(TextFieldTableCell.forTableColumn());
         }
+        tableView.setItems(data);
         tableView.getSortOrder().add(tableView.getColumns().get(0));
         for (TableColumn<Exercises, ?> column : tableView.getColumns()) {
             column.setSortable(false);
@@ -342,7 +374,7 @@ public class Controller implements Initializable {
                 column.setUserData(file.getAbsolutePath());
                 tableColumnList.add(column);
             }
-            TableColumn<Exercises, String> myLastCol = new TableColumn<>("file with results");
+            TableColumn<Exercises, String> myLastCol = new TableColumn<>(pathToLessons);
             myLastCol.setUserData("fileResult");
             tableColumnList.add(myLastCol); //add tablecolumn for result files
 
@@ -382,7 +414,7 @@ public class Controller implements Initializable {
 
             showInformationAlert("Информация о выбранной папке", "Работаем с текущими файлами");
         } else {
-            this.files = choosenDirectory.listFiles(getFileFilter("properties"));
+            this.files = choosenDirectory.listFiles(getFileFilter(typeOfFile));
             initNewFiles();
         }
     }
@@ -410,7 +442,7 @@ public class Controller implements Initializable {
         }
     }
 
-    private void showInformationAlert(String title, String text) {
+    public void showInformationAlert(String title, String text) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
 
         try {
@@ -448,17 +480,7 @@ public class Controller implements Initializable {
 
     @FXML
     public void onClickAbout() {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        try {
-            ((Stage) alert.getDialogPane().getScene().getWindow()).getIcons().add(new Image(new FileInputStream(new File("resources/main2.png"))));
-        } catch (FileNotFoundException e) {
-            System.out.println("No icon for alert");
-        }
-
-        alert.setTitle("About");
-        alert.setHeaderText("Создано на ХКБМ МОРОЗОВА");
-        alert.setContentText("Приложения для работы с интернационализацией тренажера");
-        alert.showAndWait();
+        showInformationAlert("About", "Создано на ХКБМ МОРОЗОВА");
     }
 
     @FXML
@@ -469,7 +491,6 @@ public class Controller implements Initializable {
     }
 
     private void getFileNames(File standartPathTODir) {
-        String typeOfFile = "properties";
         FileFilter fileFilter = getFileFilter(typeOfFile);
 
         try {
@@ -527,6 +548,4 @@ public class Controller implements Initializable {
         }
         return buttonList;
     }
-
-
 }

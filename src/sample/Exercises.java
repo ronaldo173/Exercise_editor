@@ -14,10 +14,15 @@ public class Exercises {
         this.value = new SimpleStringProperty(value);
     }
 
-    public Exercises(){};
+    public Exercises() {
+    }
 
     public String getKey() {
         return key.get();
+    }
+
+    public void setKey(String key) {
+        this.key.set(key);
     }
 
     public SimpleStringProperty keyProperty() {
@@ -28,16 +33,12 @@ public class Exercises {
         return value.get();
     }
 
-    public SimpleStringProperty valueProperty() {
-        return value;
-    }
-
-    public void setKey(String key) {
-        this.key.set(key);
-    }
-
     public void setValue(String value) {
         this.value.set(value);
+    }
+
+    public SimpleStringProperty valueProperty() {
+        return value;
     }
 
     @Override

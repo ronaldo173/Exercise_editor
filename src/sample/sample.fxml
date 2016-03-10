@@ -2,8 +2,9 @@
 
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0"
-            prefWidth="600.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1"
+<AnchorPane xmlns:fx="http://javafx.com/fxml/1" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity"
+            minWidth="-Infinity"
+            prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8"
             fx:controller="sample.Controller" >
     <children>
         <VBox layoutX="273.0" layoutY="92.0" prefHeight="400.0" prefWidth="600.0" AnchorPane.bottomAnchor="0.0"
@@ -32,8 +33,11 @@
                                 <ToggleGroup fx:id="toggleGroupMenuCheckEncode"/>
                             </fx:define>
                             <items>
-                                <RadioMenuItem text="UTF-8" selected="true" toggleGroup="$toggleGroupMenuCheckEncode"/>
-                                <RadioMenuItem text="UNICODE (UTF-16)" toggleGroup="$toggleGroupMenuCheckEncode"/>
+                                <RadioMenuItem text="UTF-8" toggleGroup="$toggleGroupMenuCheckEncode"
+                                               fx:id="rButtEncodeUTF8"/>
+                                <RadioMenuItem text="UNICODE (UTF-16)" selected="true"
+                                               toggleGroup="$toggleGroupMenuCheckEncode"
+                                />
 
                             </items>
                         </Menu>
