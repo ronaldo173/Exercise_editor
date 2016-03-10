@@ -1,6 +1,7 @@
 package sample;
 
 import java.io.*;
+import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -23,10 +24,11 @@ public class LoadDataFromPropToView {
     public static Map<String, String> getDataFromProp(String path) throws IOException {
         Map<String, String> map = new TreeMap<>();
         Properties properties = new Properties();
-        Reader reader = new InputStreamReader(new FileInputStream(path), encoding);//with encoding
+        try (Reader reader = new InputStreamReader(new FileInputStream(path), encoding);//with encoding
+        ) {
+            properties.load(reader);
 
-        properties.load(reader);
-        reader.close();
+        }
 
         for (Map.Entry<Object, Object> entry : properties.entrySet()) {
             if (entry.getKey().toString().startsWith("Exercise") &&
@@ -63,6 +65,7 @@ public class LoadDataFromPropToView {
     }
 
     public static void changeKeyInAllFiles(List<File> filesList, String oldKey, String newKey) {
+
         if (filesList == null || oldKey == null || newKey == null) {
             new Controller().showInformationAlert("Error", "List of files or oldKey or newKey is null");
         } else {
@@ -97,13 +100,40 @@ public class LoadDataFromPropToView {
 
 
     public static void main(String[] args) throws IOException {
-        Properties properties = new Properties();
-        String path = "resources\\languages\\s\\Russian.properties";
-        Reader reader = new InputStreamReader(new FileInputStream(path), encoding);
-        properties.load(reader);
+        OrderedProperties.OrderedPropertiesBuilder builder = new OrderedProperties.OrderedPropertiesBuilder();
+        builder.withSuppressDateInComment(true);
+        OrderedProperties properties = builder.build();
 
-        String key = "Exercise0";
-        Object exercise0 = properties.get(key);
-        System.out.println(exercise0);
+        File path = new File("resources\\languages\\Russian.cfg");
+        try (
+                Reader reader = new InputStreamReader(new FileInputStream(path), encoding)) {
+            properties.load(reader);
+        }
+
+        for (Map.Entry<String, String> entry : properties.entrySet()) {
+            System.out.println(entry.getKey() + " = " + entry.getValue());
+        }
+
+        properties.setProperty("menuNewExercise", "тестим новое");
+        try (Writer writer = new OutputStreamWriter(new FileOutputStream(path), encoding)) {
+            properties.store(writer, null);
+        }
+
+        //go test randomAccesFile to del = near{
+        RandomAccessFile randomAccessFile = new RandomAccessFile(path, "rw");
+
+        //delete lastline
+
+
+        String forStart = path.getName().substring(0, path.getName().lastIndexOf(".")) + "\r{";
+        randomAccessFile.seek(0);
+        randomAccessFile.write(forStart.getBytes(Charset.forName(encoding)));
+
+        randomAccessFile.seek(randomAccessFile.length());
+        randomAccessFile.write("}".getBytes(Charset.forName(encoding)));
+        randomAccessFile.close();
+
+
+
     }
 }

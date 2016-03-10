@@ -26,6 +26,7 @@ import java.io.*;
 import java.net.URL;
 import java.nio.file.Files;
 import java.util.*;
+import java.util.logging.Logger;
 
 public class Controller implements Initializable {
     List<String> nameColList = new ArrayList<>();
@@ -48,6 +49,7 @@ public class Controller implements Initializable {
     private String pathToLessonsStandart = "C:\\Users\\Developer\\AppData\\Roaming\\KhMBDB\\BTR4E\\IWP\\Lessons\\";
     private String pathToLessons = pathToLessonsStandart;
     private String typeOfFile = "cfg";
+    private Logger log = Logger.getLogger(Controller.class.getName());
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -76,6 +78,7 @@ public class Controller implements Initializable {
         toggleGroupMenuCheckEncode.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
             @Override
             public void changed(ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle newValue) {
+                log.info("encoding changed: " + newValue);
                 if (toggleGroupMenuCheckEncode.getSelectedToggle() != null) {
                     System.out.println(toggleGroupMenuCheckEncode.getSelectedToggle().toString());
 
@@ -91,7 +94,7 @@ public class Controller implements Initializable {
 
     private void setOnEditTableCol(String nameLang) {
         int numOfCol = nameLang.equalsIgnoreCase("all") ? 0 : 1;
-        System.out.println("nameLang..." + nameLang + "numOfCol..." + numOfCol);
+        log.info("nameLang..." + nameLang + "numOfCol for edit..." + numOfCol);
         TableColumn<Exercises, String> exercisesTableColumn = (TableColumn<Exercises, String>) tableView.getColumns().get(numOfCol);
         exercisesTableColumn.setOnEditCommit(new EventHandler<TableColumn.CellEditEvent<Exercises, String>>() {
             @Override
@@ -101,23 +104,19 @@ public class Controller implements Initializable {
                     (string.getTableView().getItems().get(string.getTablePosition().getRow())).setValue(string.getNewValue());
                     String key = string.getRowValue().getKey();
                     String newValue = string.getNewValue();
-                    System.out.println("new val is: " + newValue + " . key is: " + key);
+                    log.info("New value: " + newValue + "...For key: " + key);
                     for (File file : files) {
                         if (file.getName().startsWith(nameLang)) {
                             LoadDataFromPropToView.setPropToFile(file, key, newValue);
                         }
                     }
                 } else {
-                    System.out.println("\nedit all");
                     String oldKey = string.getOldValue();
                     String newKey = string.getNewValue();
-                    System.out.println("new val is: " + newKey + " . old is: " + oldKey);
+                    log.info("New key: " + newKey + "...old key: " + oldKey);
                     List<File> tempFilesList = new ArrayList<>(Arrays.asList(files));
-                    List<File> tempLessonListToRenaime = null;
-                    //files for change key
-                    for (File file : tempFilesList) {
-                        System.out.println(file);
-                    }
+                    List<File> tempLessonListToRename = new ArrayList<>();
+
 
                     //files for rename
                     File[] lessonFiles = (new File(pathToLessonsStandart)).listFiles(new FileFilter() {
@@ -129,12 +128,12 @@ public class Controller implements Initializable {
                             return false;
                         }
                     });
-                    tempLessonListToRenaime = Arrays.asList(lessonFiles);
+
+                    //files for change key
                     for (File lessonFile : lessonFiles) {
                         String typeOfLessonFile = lessonFile.getName().substring(lessonFile.getName().lastIndexOf("."));
                         String newFileName = newKey.toString() + typeOfLessonFile;
-                        System.out.println("old-" + lessonFile);
-                        System.out.println("new-" + newFileName);
+                        log.info("rename:\n" + "old-" + lessonFile + "\nnew-" + newFileName);
 //
                         try {
                             Files.move(lessonFile.toPath(), lessonFile.toPath().resolveSibling(newFileName));
@@ -142,16 +141,16 @@ public class Controller implements Initializable {
                             showInformationAlert("Can't rename", "file: " + lessonFile + "\n to:\n" + newKey);
                             continue;
                         }
-
+                        tempLessonListToRename.add(lessonFile);
                     }
                     //set text info about renaime
-                    String alertInfoTextWereRenaimed = tempLessonListToRenaime.size() == 0 ? "No files were renaimed" :
-                            "Were renaimed: " + tempLessonListToRenaime;
+                    String alertInfoTextWereRenaimed = tempLessonListToRename.size() == 0 ? "No files were renaimed" :
+                            "Were renaimed: " + tempLessonListToRename;
                     showInformationAlert("Renamed:", alertInfoTextWereRenaimed);
 
                     //change key in all prop files
                     LoadDataFromPropToView.changeKeyInAllFiles(tempFilesList, oldKey, newKey);
-
+//                    sortTableViewNaturalOrder();
                 }
             }
         });
@@ -172,6 +171,31 @@ public class Controller implements Initializable {
         /**
          *natural sort of table
          */
+        sortTableViewNaturalOrder();
+
+        if (!langName.equalsIgnoreCase("all")) {
+            printColNames(langName);
+
+            valueColumn.setCellValueFactory(new PropertyValueFactory<Exercises, String>("value"));
+            valueColumn.setCellFactory(TextFieldTableCell.forTableColumn());
+            data = getExercicesOneFile(langName);
+        } else {
+            printColNames("all");
+            setColumns(tableColumnList);
+            data = getExercicesFewFile(tableColumnList);
+
+            //now make first column editable with saving to all files
+            keyColumn.setCellFactory(TextFieldTableCell.forTableColumn());
+        }
+        tableView.setItems(data);
+        tableView.getSortOrder().add(tableView.getColumns().get(0));
+        for (TableColumn<Exercises, ?> column : tableView.getColumns()) {
+            column.setSortable(false);
+            column.setStyle("-fx-alignment: CENTER;");
+        }
+    }
+
+    private void sortTableViewNaturalOrder() {
         tableView.sortPolicyProperty().set(param -> {
             Comparator<Exercises> comparator = new Comparator<Exercises>() {
                 @Override
@@ -214,29 +238,6 @@ public class Controller implements Initializable {
             FXCollections.sort(tableView.getItems(), comparator);
             return true;
         });
-        tableView.getColumns().get(0).setSortType(TableColumn.SortType.ASCENDING);
-
-
-        if (!langName.equalsIgnoreCase("all")) {
-            printColNames(langName);
-
-            valueColumn.setCellValueFactory(new PropertyValueFactory<Exercises, String>("value"));
-            valueColumn.setCellFactory(TextFieldTableCell.forTableColumn());
-            data = getExercicesOneFile(langName);
-        } else {
-            printColNames("all");
-            setColumns(tableColumnList);
-            data = getExercicesFewFile(tableColumnList);
-
-            //now make first column editable with saving to all files
-            keyColumn.setCellFactory(TextFieldTableCell.forTableColumn());
-        }
-        tableView.setItems(data);
-        tableView.getSortOrder().add(tableView.getColumns().get(0));
-        for (TableColumn<Exercises, ?> column : tableView.getColumns()) {
-            column.setSortable(false);
-            column.setStyle("-fx-alignment: CENTER;");
-        }
     }
 
     private void setColumns(List<TableColumn<Exercises, String>> tableColumnList) {
@@ -249,7 +250,7 @@ public class Controller implements Initializable {
                 nameCol = nameCol.substring(nameCol.lastIndexOf("\\") + 1, nameCol.lastIndexOf("."));
                 nameColList.add(nameCol);
             }
-            tableColumn.setCellValueFactory(new PropertyValueFactory<Exercises, String>(nameCol));
+            tableColumn.setCellValueFactory(new PropertyValueFactory<>(nameCol));
         }
 
     }
@@ -408,7 +409,7 @@ public class Controller implements Initializable {
     @FXML
     public void onClickChooseDir() {
         choosenDirectory = getChoosenDirectory();
-        System.out.println("Choosen dir: " + choosenDirectory);
+        log.info("Choosen dir: " + choosenDirectory);
 
         if (choosenDirectory == null) {
 
@@ -470,7 +471,6 @@ public class Controller implements Initializable {
             double size = resultFont.getSize();
             String family = resultFont.getFamily();
             System.out.println(resultFont);
-//            tableView.setStyle("-fx-font-style: " +  style );
             tableView.setStyle("-fx-font-size: " + size);
             for (TableColumn<Exercises, ?> column : tableView.getColumns()) {
                 column.setStyle("-fx-font-family: " + "'" + family + "'");
@@ -485,7 +485,7 @@ public class Controller implements Initializable {
 
     @FXML
     public void onClickExit() {
-        System.out.println("exit");
+        log.info("Exit");
         ((EventHandler<ActionEvent>) event -> Platform.exit()).handle(null);
 
     }
