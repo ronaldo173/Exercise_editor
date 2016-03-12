@@ -48,20 +48,47 @@ public class LoadDataFromPropToView {
      */
     public static void setPropToFile(File file, String key, String newValue) {
 
-        Properties properties = new Properties();
+        OrderedProperties.OrderedPropertiesBuilder builder = new OrderedProperties.OrderedPropertiesBuilder();
+        builder.withSuppressDateInComment(true);
+        OrderedProperties properties = builder.build();
+
         try (Reader reader = new InputStreamReader(new FileInputStream(file), encoding)
         ) {
             properties.load(reader);
             properties.setProperty(key, newValue);
 
             try (Writer writer = new OutputStreamWriter(new FileOutputStream(file), encoding)) {
-                properties.store(writer, null);
+//                properties.store(writer, null);
+                fixAndWritePropertiesToFileWithBrackets(writer, properties, file);
             }
+
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private static void fixAndWritePropertiesToFileWithBrackets(Writer writer, OrderedProperties properties,
+                                                                File file) throws IOException {
+
+        if (properties.containsProperty("}")) {
+            properties.removeProperty("}");
+        }
+        properties.store(writer, null);
+
+        if (file != null) {
+            try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw")) {
+                StringBuilder forStart = new StringBuilder(file.getName().substring(0, file.getName().lastIndexOf(".")));
+//            String forStart = path.getName().substring(0, path.getName().lastIndexOf(".")) + "\r\n{\r\n";
+                randomAccessFile.seek(0);
+                randomAccessFile.write(forStart.append("\r\n{\r\n").toString().getBytes(Charset.forName(encoding)));
+
+                randomAccessFile.seek(randomAccessFile.length());
+                randomAccessFile.write("}".getBytes(Charset.forName(encoding)));
+            }
+        }
+
     }
 
     public static void changeKeyInAllFiles(List<File> filesList, String oldKey, String newKey) {
@@ -83,17 +110,20 @@ public class LoadDataFromPropToView {
     private static void changeKeyInOneFile(File file, String oldKey, String newKey) throws IOException {
 
         try (
-                Reader reader = new InputStreamReader(new FileInputStream(file), encoding);//with encoding
+                Reader reader = new InputStreamReader(new FileInputStream(file), encoding)//with encoding
         ) {
-            Properties properties = new Properties();
+            OrderedProperties.OrderedPropertiesBuilder builder = new OrderedProperties.OrderedPropertiesBuilder();
+            builder.withSuppressDateInComment(true);
+            OrderedProperties properties = builder.build();
             properties.load(reader);
 
-            String value = (String) properties.get(oldKey);
-            properties.remove(oldKey);
+            String value = properties.getProperty(oldKey);
+            properties.removeProperty(oldKey);
             properties.setProperty(newKey, value);
 
             try (Writer writer = new OutputStreamWriter(new FileOutputStream(file), encoding)) {
                 properties.store(writer, null);
+                fixAndWritePropertiesToFileWithBrackets(writer, properties, file);
             }
         }
     }
@@ -116,24 +146,7 @@ public class LoadDataFromPropToView {
 
         properties.setProperty("menuNewExercise", "тестим новое");
         try (Writer writer = new OutputStreamWriter(new FileOutputStream(path), encoding)) {
-            properties.store(writer, null);
+            fixAndWritePropertiesToFileWithBrackets(writer, properties, path);
         }
-
-        //go test randomAccesFile to del = near{
-        RandomAccessFile randomAccessFile = new RandomAccessFile(path, "rw");
-
-        //delete lastline
-
-
-        String forStart = path.getName().substring(0, path.getName().lastIndexOf(".")) + "\r{";
-        randomAccessFile.seek(0);
-        randomAccessFile.write(forStart.getBytes(Charset.forName(encoding)));
-
-        randomAccessFile.seek(randomAccessFile.length());
-        randomAccessFile.write("}".getBytes(Charset.forName(encoding)));
-        randomAccessFile.close();
-
-
-
     }
 }

@@ -220,7 +220,6 @@ public class OrderedProperties implements Serializable {
         CustomProperties customProperties = new CustomProperties(this.properties);
         if (suppressDate) {
             customProperties.store(new DateSuppressingPropertiesBufferedWriter(writer), comments);
-            System.out.println(".....mystore");
         } else {
             customProperties.store(writer, comments);
         }

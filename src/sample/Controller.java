@@ -113,44 +113,53 @@ public class Controller implements Initializable {
                 } else {
                     String oldKey = string.getOldValue();
                     String newKey = string.getNewValue();
-                    log.info("New key: " + newKey + "...old key: " + oldKey);
-                    List<File> tempFilesList = new ArrayList<>(Arrays.asList(files));
-                    List<File> tempLessonListToRename = new ArrayList<>();
+
+                    if (oldKey.equals(newKey)) {
+                        System.out.println("the same");
+                        showInformationAlert("Rename info", "Old value = new value, no rename");
+                    } else {
 
 
-                    //files for rename
-                    File[] lessonFiles = (new File(pathToLessonsStandart)).listFiles(new FileFilter() {
-                        @Override
-                        public boolean accept(File pathname) {
-                            if (pathname.getName().startsWith(oldKey + ".")) {
-                                return true;
+                        log.info("New key: " + newKey + "...old key: " + oldKey);
+                        List<File> tempFilesList = new ArrayList<>(Arrays.asList(files));
+                        List<File> tempLessonListToRename = new ArrayList<>();
+
+
+                        //files for rename
+                        File[] lessonFiles = (new File(pathToLessonsStandart)).listFiles(new FileFilter() {
+                            @Override
+                            public boolean accept(File pathname) {
+                                if (pathname.getName().startsWith(oldKey + ".")) {
+                                    return true;
+                                }
+                                return false;
                             }
-                            return false;
-                        }
-                    });
+                        });
 
-                    //files for change key
-                    for (File lessonFile : lessonFiles) {
-                        String typeOfLessonFile = lessonFile.getName().substring(lessonFile.getName().lastIndexOf("."));
-                        String newFileName = newKey.toString() + typeOfLessonFile;
-                        log.info("rename:\n" + "old-" + lessonFile + "\nnew-" + newFileName);
+                        //files for change key
+                        for (File lessonFile : lessonFiles) {
+                            String typeOfLessonFile = lessonFile.getName().substring(lessonFile.getName().lastIndexOf("."));
+                            String newFileName = newKey.toString() + typeOfLessonFile;
+                            log.info("rename:\n" + "old-" + lessonFile + "\nnew-" + newFileName);
 //
-                        try {
-                            Files.move(lessonFile.toPath(), lessonFile.toPath().resolveSibling(newFileName));
-                        } catch (IOException e) {
-                            showInformationAlert("Can't rename", "file: " + lessonFile + "\n to:\n" + newKey);
-                            continue;
+                            try {
+                                Files.move(lessonFile.toPath(), lessonFile.toPath().resolveSibling(newFileName));
+                            } catch (IOException e) {
+                                showInformationAlert("Can't rename", "file: " + lessonFile + "\n to:\n" + newKey);
+                                continue;
+                            }
+                            tempLessonListToRename.add(lessonFile);
                         }
-                        tempLessonListToRename.add(lessonFile);
-                    }
-                    //set text info about renaime
-                    String alertInfoTextWereRenaimed = tempLessonListToRename.size() == 0 ? "No files were renaimed" :
-                            "Were renaimed: " + tempLessonListToRename;
-                    showInformationAlert("Renamed:", alertInfoTextWereRenaimed);
+                        //set text info about renaime
+                        String alertInfoTextWereRenaimed = tempLessonListToRename.size() == 0 ? "No files were renaimed" :
+                                "Were renamed: " + tempLessonListToRename;
+                        showInformationAlert("Renamed:", alertInfoTextWereRenaimed);
 
-                    //change key in all prop files
-                    LoadDataFromPropToView.changeKeyInAllFiles(tempFilesList, oldKey, newKey);
-//                    sortTableViewNaturalOrder();
+                        //change key in all prop files
+                        LoadDataFromPropToView.changeKeyInAllFiles(tempFilesList, oldKey, newKey);
+//                    sortTableViewNaturalOrder(); re init
+                        initTable("all");
+                    }
                 }
             }
         });
@@ -178,11 +187,11 @@ public class Controller implements Initializable {
 
             valueColumn.setCellValueFactory(new PropertyValueFactory<Exercises, String>("value"));
             valueColumn.setCellFactory(TextFieldTableCell.forTableColumn());
-            data = getExercicesOneFile(langName);
+            data = getExercisesOneFile(langName);
         } else {
             printColNames("all");
             setColumns(tableColumnList);
-            data = getExercicesFewFile(tableColumnList);
+            data = getExercisesFewFile(tableColumnList);
 
             //now make first column editable with saving to all files
             keyColumn.setCellFactory(TextFieldTableCell.forTableColumn());
@@ -255,7 +264,7 @@ public class Controller implements Initializable {
 
     }
 
-    private ObservableList<Exercises> getExercicesFewFile(List<TableColumn<Exercises, String>> tableColumnList) {
+    private ObservableList<Exercises> getExercisesFewFile(List<TableColumn<Exercises, String>> tableColumnList) {
 
         ObservableList<Exercises> exercises = FXCollections.observableArrayList();
         Map<String, List<String>> mapAll = new HashMap<>();
@@ -310,9 +319,9 @@ public class Controller implements Initializable {
                 || file.listFiles(fileFilter).length == 0) {
             showInformationAlert("Error", "Need to choose directory with RESULT files: ...Lessons");
 
-            file = getChoosenDirectory();
+            file = getChosenDirectory();
             pathToLessons = file.getAbsolutePath();
-            System.out.println("Choosen dir: " + file);
+            log.info("Choose dir: " + file);
         }
 
         File[] files = file.listFiles(fileFilter);
@@ -330,7 +339,7 @@ public class Controller implements Initializable {
         return map;
     }
 
-    private ObservableList<Exercises> getExercicesOneFile(String langName) {
+    private ObservableList<Exercises> getExercisesOneFile(String langName) {
         ObservableList<Exercises> exercises = FXCollections.observableArrayList();
         Map<String, String> dataFromProp = null;
         File fileForLoad = null;
@@ -353,7 +362,11 @@ public class Controller implements Initializable {
         return exercises;
     }
 
-
+    /**
+     * set columns depend on language
+     *
+     * @param lang
+     */
     private void printColNames(String lang) {
         tableView.getColumns().clear();
         tableView.getColumns().add(keyColumn);
@@ -389,7 +402,7 @@ public class Controller implements Initializable {
         tableView.getItems().clear();
     }
 
-    private File getChoosenDirectory() {
+    private File getChosenDirectory() {
         DirectoryChooser chooser = new DirectoryChooser();
         chooser.setInitialDirectory(standartPathTODir);
         return chooser.showDialog(null);
@@ -397,19 +410,19 @@ public class Controller implements Initializable {
 
     public void onClickChooseDirLessons(ActionEvent actionEvent) {
 
-        File choosenDirectory = getChoosenDirectory();
-        if (choosenDirectory == null) {
+        File chosenDirectory = getChosenDirectory();
+        if (chosenDirectory == null) {
             showInformationAlert("Alert", "Don't choose directory for lessons, work with standart.");
         } else {
-            pathToLessons = choosenDirectory.getAbsolutePath();
+            pathToLessons = chosenDirectory.getAbsolutePath();
             initNewFiles();
         }
     }
 
     @FXML
     public void onClickChooseDir() {
-        choosenDirectory = getChoosenDirectory();
-        log.info("Choosen dir: " + choosenDirectory);
+        choosenDirectory = getChosenDirectory();
+        log.info("Chosen dir: " + choosenDirectory);
 
         if (choosenDirectory == null) {
 
@@ -431,18 +444,24 @@ public class Controller implements Initializable {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Choose files");
 
-        List<File> filesChoosen = fileChooser.showOpenMultipleDialog(null);
-        System.out.println(filesChoosen);
+        List<File> filesChosen = fileChooser.showOpenMultipleDialog(null);
+        log.info("Chosen files: " + filesChosen);
 
-        if (filesChoosen == null) {
+        if (filesChosen == null) {
             showInformationAlert("Файлы не выбраны", "Работаю со старыми файлами");
         } else {
 
-            this.files = filesChoosen.toArray(new File[filesChoosen.size()]);
+            this.files = filesChosen.toArray(new File[filesChosen.size()]);
             initNewFiles();
         }
     }
 
+    /**
+     * To show information dialog, with picture ^)
+     *
+     * @param title
+     * @param text
+     */
     public void showInformationAlert(String title, String text) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
 
@@ -460,6 +479,9 @@ public class Controller implements Initializable {
         alert.showAndWait();
     }
 
+    /**
+     * To show dialog for choosing font
+     */
     @FXML
     public void onClickChoseFontDialog() {
 
@@ -490,6 +512,12 @@ public class Controller implements Initializable {
 
     }
 
+    /**
+     * To add files from standartPathTODir to array files
+     * with using FileFilter
+     *
+     * @param standartPathTODir
+     */
     private void getFileNames(File standartPathTODir) {
         FileFilter fileFilter = getFileFilter(typeOfFile);
 
@@ -506,6 +534,12 @@ public class Controller implements Initializable {
         }
     }
 
+    /**
+     * return FileFilter by type of file
+     *
+     * @param type
+     * @return
+     */
     private FileFilter getFileFilter(String type) {
         return new FileFilter() {
             @Override
@@ -518,6 +552,11 @@ public class Controller implements Initializable {
         };
     }
 
+    /**
+     * initialize RadioBottoms, depends on contest of array files
+     *
+     * @return
+     */
     private List<RadioButton> initRadioBottoms() {
         List<RadioButton> buttonList = new ArrayList<>();
         hBoxForRBut.setAlignment(Pos.CENTER);
