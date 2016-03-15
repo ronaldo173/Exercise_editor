@@ -5,7 +5,7 @@
 <AnchorPane xmlns:fx="http://javafx.com/fxml/1" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity"
             minWidth="-Infinity"
             prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8"
-            fx:controller="sample.Controller" >
+            fx:controller="sample.Controller">
     <children>
         <VBox layoutX="273.0" layoutY="92.0" prefHeight="400.0" prefWidth="600.0" AnchorPane.bottomAnchor="0.0"
               AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
@@ -14,18 +14,21 @@
                     <menus>
                         <Menu mnemonicParsing="false" text="Languages files...">
                             <items>
-                                <MenuItem mnemonicParsing="false" onAction="#onClickChooseDir" text="Choose directory..."/>
-                                <MenuItem mnemonicParsing="false" onAction="#onClickChooseFile" text ="Choose files..."/>
+                                <MenuItem mnemonicParsing="false" onAction="#onClickChooseDir"
+                                          text="Choose directory..."/>
+                                <MenuItem mnemonicParsing="false" onAction="#onClickChooseFile" text="Choose files..."/>
                                 <SeparatorMenuItem mnemonicParsing="false"/>
                                 <MenuItem mnemonicParsing="false" text="Exit" onAction="#onClickExit"/>
                             </items>
                         </Menu>
                         <Menu text="Lessons files...">
-                            <MenuItem mnemonicParsing="false" onAction="#onClickChooseDirLessons" text="Choose directory..."/>
+                            <MenuItem mnemonicParsing="false" onAction="#onClickChooseDirLessons"
+                                      text="Choose directory..."/>
                         </Menu>
                         <Menu mnemonicParsing="false" text="Fonts">
                             <items>
-                                <MenuItem mnemonicParsing="false" text="Choose font" onAction="#onClickChoseFontDialog"/>
+                                <MenuItem mnemonicParsing="false" text="Choose font"
+                                          onAction="#onClickChoseFontDialog"/>
                             </items>
                         </Menu>
                         <Menu mnemonicParsing="false" text="Encoding">
@@ -49,7 +52,8 @@
                         </Menu>
                     </menus>
                 </MenuBar>
-                <BorderPane prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS" style="-fx-background-color: silver" >
+                <BorderPane prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS"
+                            style="-fx-background-color: silver">
                     <top>
                         <HBox fx:id="hBoxForRBut" prefHeight="47.0" prefWidth="600.0" BorderPane.alignment="CENTER">
                             <fx:define>
@@ -58,8 +62,9 @@
                         </HBox>
                     </top>
                     <center>
-                        <TableView fx:id="tableView" editable="true" prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER"
-                         >
+                        <TableView fx:id="tableView" editable="true" prefHeight="200.0" prefWidth="200.0"
+                                   BorderPane.alignment="CENTER"
+                        >
                             <columns>
                                 <TableColumn prefWidth="75.0" text="Key"/>
                                 <TableColumn prefWidth="75.0" text="Exercise"/>

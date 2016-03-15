@@ -9,7 +9,7 @@ public class Exercises {
     private SimpleStringProperty key;
     private SimpleStringProperty value;
 
-    public Exercises(String  key, String  value) {
+    public Exercises(String key, String value) {
         this.key = new SimpleStringProperty(key);
         this.value = new SimpleStringProperty(value);
     }

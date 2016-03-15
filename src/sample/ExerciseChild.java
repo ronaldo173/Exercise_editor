@@ -62,6 +62,10 @@ public class ExerciseChild extends Exercises {
         return key.get();
     }
 
+    public void setKey(String key) {
+        this.key.set(key);
+    }
+
     @Override
     public SimpleStringProperty keyProperty() {
         return key;
@@ -69,6 +73,10 @@ public class ExerciseChild extends Exercises {
 
     public String getArabic() {
         return Arabic.get();
+    }
+
+    public void setArabic(String arabic) {
+        this.Arabic.set(arabic);
     }
 
     public SimpleStringProperty arabicProperty() {
@@ -79,12 +87,20 @@ public class ExerciseChild extends Exercises {
         return English.get();
     }
 
+    public void setEnglish(String english) {
+        this.English.set(english);
+    }
+
     public SimpleStringProperty englishProperty() {
         return English;
     }
 
     public String getRussian() {
         return Russian.get();
+    }
+
+    public void setRussian(String russian) {
+        this.Russian.set(russian);
     }
 
     public SimpleStringProperty russianProperty() {
@@ -95,12 +111,20 @@ public class ExerciseChild extends Exercises {
         return Ukraine.get();
     }
 
+    public void setUkraine(String ukraine) {
+        this.Ukraine.set(ukraine);
+    }
+
     public SimpleStringProperty ukraineProperty() {
         return Ukraine;
     }
 
     public String getFrench() {
         return French.get();
+    }
+
+    public void setFrench(String french) {
+        this.French.set(french);
     }
 
     public SimpleStringProperty frenchProperty() {
@@ -111,6 +135,10 @@ public class ExerciseChild extends Exercises {
         return Georgian.get();
     }
 
+    public void setGeorgian(String georgian) {
+        this.Georgian.set(georgian);
+    }
+
     public SimpleStringProperty georgianProperty() {
         return Georgian;
     }
@@ -119,7 +147,25 @@ public class ExerciseChild extends Exercises {
         return fileResult.get();
     }
 
+    public void setFileResult(String fileResult) {
+        this.fileResult.set(fileResult);
+    }
+
     public SimpleStringProperty fileResultProperty() {
         return fileResult;
+    }
+
+    @Override
+    public String toString() {
+        return "ExerciseChild{" +
+                "key=" + key.getValue() +
+                ", Arabic=" + Arabic.getValue() +
+                ", English=" + English.getValue() +
+                ", Russian=" + Russian.getValue() +
+                ", Ukraine=" + Ukraine.getValue() +
+                ", French=" + French.getValue() +
+                ", Georgian=" + Georgian.getValue() +
+                ", fileResult=" + fileResult.getValue() +
+                '}';
     }
 }

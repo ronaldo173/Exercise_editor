@@ -1,6 +1,8 @@
 package sample;
 
 import javafx.application.Platform;
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
@@ -15,6 +17,7 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.image.Image;
+import javafx.scene.input.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.text.Font;
 import javafx.stage.DirectoryChooser;
@@ -29,6 +32,8 @@ import java.util.*;
 import java.util.logging.Logger;
 
 public class Controller implements Initializable {
+    private final IntegerProperty dragFromIndex = new SimpleIntegerProperty(-1);
+    private final DataFormat SERIALIZED_MIME_TYPE = new DataFormat("application/x-java-serialized-object");
     List<String> nameColList = new ArrayList<>();
     @FXML
     private TableView<Exercises> tableView;
@@ -40,7 +45,7 @@ public class Controller implements Initializable {
     private ToggleGroup toggleGroupMenuCheckEncode;
     @FXML
     private RadioMenuItem rButtEncodeUTF8;
-    private File choosenDirectory;
+    private File chosenDirectory;
     private File standartPathTODir;
     private File[] files;
     private TableColumn<Exercises, String> valueColumn;
@@ -50,6 +55,7 @@ public class Controller implements Initializable {
     private String pathToLessons = pathToLessonsStandart;
     private String typeOfFile = "cfg";
     private Logger log = Logger.getLogger(Controller.class.getName());
+    private Comparator<String> comparatorNaturalOrder;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -90,6 +96,158 @@ public class Controller implements Initializable {
                 }
             }
         });
+
+        makeDragDropTableWithSwapFirstCol();
+    }
+
+    private void makeDragDropTableWithSwapFirstCol() {
+        tableView.setOnMouseClicked(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent event) {
+                if (event.getClickCount() == 2) {
+                    Exercises selected = tableView.getSelectionModel().getSelectedItem();
+
+                    if (selected != null) {
+                        System.out.println(selected);
+                    } else {
+                        System.out.println("no selected");
+                    }
+                }
+            }
+        });
+
+        tableView.setRowFactory(par -> {
+            TableRow<Exercises> row = new TableRow<>();
+
+            row.setOnDragDetected(event -> {
+                if (!row.isEmpty()) {
+                    Integer index = row.getIndex();
+                    dragFromIndex.set(index);
+
+                    Dragboard dragboard = row.startDragAndDrop(TransferMode.MOVE);
+                    dragboard.setDragView(row.snapshot(null, null));
+                    ClipboardContent clipboardContent = new ClipboardContent();
+
+                    clipboardContent.put(SERIALIZED_MIME_TYPE, index);
+                    dragboard.setContent(clipboardContent);
+                    event.consume();
+                }
+            });
+
+            row.setOnDragEntered(new EventHandler<DragEvent>() {
+                @Override
+                public void handle(DragEvent event) {
+                    if (dragFromIndex.get() >= 0 && dragFromIndex.get() != row.getIndex())
+                        row.setStyle("-fx-background-color: gold");
+                }
+            });
+
+            row.setOnDragExited(new EventHandler<DragEvent>() {
+                @Override
+                public void handle(DragEvent event) {
+                    row.setStyle("");
+                }
+            });
+
+            row.setOnDragOver(event -> {
+                Dragboard db = event.getDragboard();
+                if (db.hasContent(SERIALIZED_MIME_TYPE)) {
+                    if (row.getIndex() != ((Integer) db.getContent(SERIALIZED_MIME_TYPE)).intValue()) {
+                        event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
+                        event.consume();
+                    }
+                }
+            });
+
+            row.setOnDragDropped(event -> {
+                Dragboard db = event.getDragboard();
+                if (db.hasContent(SERIALIZED_MIME_TYPE)) {
+                    int draggedIndex = (Integer) db.getContent(SERIALIZED_MIME_TYPE);
+                    int dropIndex;
+
+                    if (row.isEmpty()) {
+                        dropIndex = tableView.getItems().size();
+                    } else {
+                        dropIndex = row.getIndex();
+
+                        Exercises personDragged = tableView.getItems().get(draggedIndex);
+                        Exercises personResult = tableView.getItems().get(dropIndex);
+                        System.out.println(tableView.getColumns().size() + " --->" + " columns");
+                        System.out.println(personDragged);
+                        System.out.println(personResult);
+
+                        swapExercisesFirstColumn(personDragged, personResult);
+                    }
+
+                    event.setDropCompleted(true);
+                    tableView.getSelectionModel().select(dropIndex);
+                    event.consume();
+                }
+            });
+
+            return row;
+        });
+    }
+
+    private void swapExercisesFirstColumn(Exercises exerciseDragged, Exercises exerciseResult) {
+        String temp = exerciseDragged.getKey();
+
+        exerciseDragged.setKey(exerciseResult.getKey());
+        exerciseResult.setKey(temp);
+
+        //TODO make swap logic in files
+
+    }
+
+    /**
+     * return comparator for String with natural order ignore case
+     *
+     * @return
+     */
+    private Comparator<String> getComparatorNaturalOrder() {
+        if (this.comparatorNaturalOrder != null) {
+            return this.comparatorNaturalOrder;
+        } else {
+            this.comparatorNaturalOrder = new Comparator<String>() {
+                @Override
+                public int compare(String o1, String o2) {
+                    String s1 = o1.toLowerCase();
+                    String s2 = o2.toLowerCase();
+
+                    String[] s1Parts = s1.split("(?<=\\D)(?=\\d)|(?<=\\d)(?=\\D)");
+                    String[] s2Parts = s2.split("(?<=\\D)(?=\\d)|(?<=\\d)(?=\\D)");
+
+                    int i = 0;
+                    while (i < s1Parts.length && i < s2Parts.length) {
+
+                        if (s1Parts[i].compareTo(s2Parts[i]) == 0) {
+                            ++i;
+                        } else {
+                            try {
+                                int intS1 = Integer.parseInt(s1Parts[i]);
+                                int intS2 = Integer.parseInt(s2Parts[i]);
+                                int diff = intS1 - intS2;
+                                if (diff == 0) {
+                                    ++i;
+                                } else {
+                                    return diff;
+                                }
+                            } catch (Exception ex) {
+                                return s1.compareTo(s2);
+                            }
+                        }//end else
+                    }//end while
+                    if (s1.length() < s2.length()) {
+                        return -1;
+                    } else if (s1.length() > s2.length()) {
+                        return 1;
+                    } else {
+                        return 0;
+                    }
+                }
+            };
+            return this.comparatorNaturalOrder;
+        }
     }
 
     private void setOnEditTableCol(String nameLang) {
@@ -157,7 +315,7 @@ public class Controller implements Initializable {
 
                         //change key in all prop files
                         LoadDataFromPropToView.changeKeyInAllFiles(tempFilesList, oldKey, newKey);
-//                    sortTableViewNaturalOrder(); re init
+//                     re init
                         initTable("all");
                     }
                 }
@@ -175,17 +333,13 @@ public class Controller implements Initializable {
         ObservableList<Exercises> data;
         clearTable();
         tableColumnList.clear();
-        keyColumn.setCellValueFactory(new PropertyValueFactory<Exercises, String>("key"));
+        keyColumn.setCellValueFactory(new PropertyValueFactory<>("key"));
 
-        /**
-         *natural sort of table
-         */
-        sortTableViewNaturalOrder();
 
         if (!langName.equalsIgnoreCase("all")) {
             printColNames(langName);
 
-            valueColumn.setCellValueFactory(new PropertyValueFactory<Exercises, String>("value"));
+            valueColumn.setCellValueFactory(new PropertyValueFactory<>("value"));
             valueColumn.setCellFactory(TextFieldTableCell.forTableColumn());
             data = getExercisesOneFile(langName);
         } else {
@@ -199,55 +353,22 @@ public class Controller implements Initializable {
         tableView.setItems(data);
         tableView.getSortOrder().add(tableView.getColumns().get(0));
         for (TableColumn<Exercises, ?> column : tableView.getColumns()) {
-            column.setSortable(false);
             column.setStyle("-fx-alignment: CENTER;");
         }
+
+        /**
+         *natural sort of table
+         */
+        for (TableColumn<Exercises, ?> column : tableView.getColumns()) {
+            TableColumn<Exercises, String> temp = (TableColumn<Exercises, String>) column;
+            temp.setComparator(getComparatorNaturalOrder());
+        }
+
+        keyColumn.setSortType(TableColumn.SortType.ASCENDING);
+        tableView.getSortOrder().addAll(keyColumn);
+
     }
 
-    private void sortTableViewNaturalOrder() {
-        tableView.sortPolicyProperty().set(param -> {
-            Comparator<Exercises> comparator = new Comparator<Exercises>() {
-                @Override
-                public int compare(Exercises o1, Exercises o2) {
-                    String s1 = o1.getKey();
-                    String s2 = o2.getKey();
-
-                    String[] s1Parts = s1.split("(?<=\\D)(?=\\d)|(?<=\\d)(?=\\D)");
-                    String[] s2Parts = s2.split("(?<=\\D)(?=\\d)|(?<=\\d)(?=\\D)");
-
-                    int i = 0;
-                    while (i < s1Parts.length && i < s2Parts.length) {
-
-                        if (s1Parts[i].compareTo(s2Parts[i]) == 0) {
-                            ++i;
-                        } else {
-                            try {
-                                int intS1 = Integer.parseInt(s1Parts[i]);
-                                int intS2 = Integer.parseInt(s2Parts[i]);
-                                int diff = intS1 - intS2;
-                                if (diff == 0) {
-                                    ++i;
-                                } else {
-                                    return diff;
-                                }
-                            } catch (Exception ex) {
-                                return s1.compareTo(s2);
-                            }
-                        }//end else
-                    }//end while
-                    if (s1.length() < s2.length()) {
-                        return -1;
-                    } else if (s1.length() > s2.length()) {
-                        return 1;
-                    } else {
-                        return 0;
-                    }
-                }
-            };
-            FXCollections.sort(tableView.getItems(), comparator);
-            return true;
-        });
-    }
 
     private void setColumns(List<TableColumn<Exercises, String>> tableColumnList) {
         nameColList.clear();
@@ -421,14 +542,14 @@ public class Controller implements Initializable {
 
     @FXML
     public void onClickChooseDir() {
-        choosenDirectory = getChosenDirectory();
-        log.info("Chosen dir: " + choosenDirectory);
+        chosenDirectory = getChosenDirectory();
+        log.info("Chosen dir: " + chosenDirectory);
 
-        if (choosenDirectory == null) {
+        if (chosenDirectory == null) {
 
             showInformationAlert("Информация о выбранной папке", "Работаем с текущими файлами");
         } else {
-            this.files = choosenDirectory.listFiles(getFileFilter(typeOfFile));
+            this.files = chosenDirectory.listFiles(getFileFilter(typeOfFile));
             initNewFiles();
         }
     }
@@ -529,7 +650,7 @@ public class Controller implements Initializable {
             System.out.println("\n");
         } catch (Exception e) {
             onClickChooseDir();
-            standartPathTODir = choosenDirectory;
+            standartPathTODir = chosenDirectory;
             getFileNames(standartPathTODir);
         }
     }
@@ -568,7 +689,7 @@ public class Controller implements Initializable {
             buttonList.add(radioButton);
             hBoxForRBut.getChildren().add(radioButton);
 
-            if (name.equals("Ukraine")) {
+            if (name.equalsIgnoreCase("Ukraine")) {
                 radioButton.setSelected(true);
             }
         }
