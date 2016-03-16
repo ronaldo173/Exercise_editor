@@ -29,9 +29,13 @@ import java.io.*;
 import java.net.URL;
 import java.nio.file.Files;
 import java.util.*;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 public class Controller implements Initializable {
+
     private final IntegerProperty dragFromIndex = new SimpleIntegerProperty(-1);
     private final DataFormat SERIALIZED_MIME_TYPE = new DataFormat("application/x-java-serialized-object");
     List<String> nameColList = new ArrayList<>();
@@ -56,18 +60,33 @@ public class Controller implements Initializable {
     private String typeOfFile = "cfg";
     private Logger log = Logger.getLogger(Controller.class.getName());
     private Comparator<String> comparatorNaturalOrder;
+    private File currentFileForTable = null;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         standartPathTODir = new File(new File(".").getAbsolutePath() + "\\resources\\languages");
+        //make logger save to file
+
+        try {
+            FileHandler handler = new FileHandler("logFile.log");
+            log.addHandler(handler);
+            SimpleFormatter formatter = new SimpleFormatter();
+            handler.setFormatter(formatter);
+
+            log.info("First log.");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
 
         getFileNames(standartPathTODir);
         initRadioBottoms();
         try {
             initTable("Ukraine");
             setOnEditTableCol("Ukraine");
+            currentFileForTable = initCurrentOpenFile("Ukraine");
         } catch (Exception e) {
-            System.out.println("no Ukraine file");
+            log.info("initTable try choose Ukraine lang, no Ukraine");
         }
 
         toggleGroup.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
@@ -78,26 +97,37 @@ public class Controller implements Initializable {
                 System.out.println(nameOfRButt);
                 initTable(nameOfRButt);
                 setOnEditTableCol(nameOfRButt);
+                currentFileForTable = initCurrentOpenFile(nameOfRButt);
             }
         });
 
         toggleGroupMenuCheckEncode.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
             @Override
             public void changed(ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle newValue) {
-                log.info("encoding changed: " + newValue);
                 if (toggleGroupMenuCheckEncode.getSelectedToggle() != null) {
-                    System.out.println(toggleGroupMenuCheckEncode.getSelectedToggle().toString());
 
                     if (newValue == rButtEncodeUTF8) {
                         LoadDataFromPropToView.setEncoding("UTF-8");
                     } else {
                         LoadDataFromPropToView.setEncoding("UTF-16");
                     }
+                    log.info("Changed encoding to: " + LoadDataFromPropToView.getEncoding());
                 }
             }
         });
 
         makeDragDropTableWithSwapFirstCol();
+    }
+
+    private File initCurrentOpenFile(String nameOfLanguage) {
+
+        for (File file : files) {
+            if (file.getName().startsWith(nameOfLanguage)) {
+                return file;
+            }
+        }
+
+        return null;
     }
 
     private void makeDragDropTableWithSwapFirstCol() {
@@ -137,8 +167,9 @@ public class Controller implements Initializable {
             row.setOnDragEntered(new EventHandler<DragEvent>() {
                 @Override
                 public void handle(DragEvent event) {
-                    if (dragFromIndex.get() >= 0 && dragFromIndex.get() != row.getIndex())
+                    if (dragFromIndex.get() >= 0 && dragFromIndex.get() != row.getIndex()) {
                         row.setStyle("-fx-background-color: gold");
+                    }
                 }
             });
 
@@ -146,8 +177,10 @@ public class Controller implements Initializable {
                 @Override
                 public void handle(DragEvent event) {
                     row.setStyle("");
+
                 }
             });
+
 
             row.setOnDragOver(event -> {
                 Dragboard db = event.getDragboard();
@@ -172,15 +205,15 @@ public class Controller implements Initializable {
 
                         Exercises personDragged = tableView.getItems().get(draggedIndex);
                         Exercises personResult = tableView.getItems().get(dropIndex);
-                        System.out.println(tableView.getColumns().size() + " --->" + " columns");
-                        System.out.println(personDragged);
-                        System.out.println(personResult);
+                        log.info("Swap:\n" +
+                                personDragged + "\n" + personResult);
 
                         swapExercisesFirstColumn(personDragged, personResult);
                     }
 
                     event.setDropCompleted(true);
                     tableView.getSelectionModel().select(dropIndex);
+                    tableView.getFocusModel().focus(draggedIndex);
                     event.consume();
                 }
             });
@@ -196,7 +229,13 @@ public class Controller implements Initializable {
         exerciseResult.setKey(temp);
 
         //TODO make swap logic in files
+        int sizeColumns = tableView.getColumns().size();
 
+        if (sizeColumns == 2) {
+            System.out.println(currentFileForTable);
+        } else {
+            System.out.println(sizeColumns);
+        }
     }
 
     /**
@@ -255,6 +294,7 @@ public class Controller implements Initializable {
         log.info("nameLang..." + nameLang + "numOfCol for edit..." + numOfCol);
         TableColumn<Exercises, String> exercisesTableColumn = (TableColumn<Exercises, String>) tableView.getColumns().get(numOfCol);
         exercisesTableColumn.setOnEditCommit(new EventHandler<TableColumn.CellEditEvent<Exercises, String>>() {
+
             @Override
             public void handle(TableColumn.CellEditEvent<Exercises, String> string) {
 
@@ -263,17 +303,13 @@ public class Controller implements Initializable {
                     String key = string.getRowValue().getKey();
                     String newValue = string.getNewValue();
                     log.info("New value: " + newValue + "...For key: " + key);
-                    for (File file : files) {
-                        if (file.getName().startsWith(nameLang)) {
-                            LoadDataFromPropToView.setPropToFile(file, key, newValue);
-                        }
-                    }
+                    LoadDataFromPropToView.setPropToFile(currentFileForTable, key, newValue);
+
                 } else {
                     String oldKey = string.getOldValue();
                     String newKey = string.getNewValue();
 
                     if (oldKey.equals(newKey)) {
-                        System.out.println("the same");
                         showInformationAlert("Rename info", "Old value = new value, no rename");
                     } else {
 
@@ -534,6 +570,7 @@ public class Controller implements Initializable {
         File chosenDirectory = getChosenDirectory();
         if (chosenDirectory == null) {
             showInformationAlert("Alert", "Don't choose directory for lessons, work with standart.");
+            log.log(Level.WARNING, "No directory chosen");
         } else {
             pathToLessons = chosenDirectory.getAbsolutePath();
             initNewFiles();
