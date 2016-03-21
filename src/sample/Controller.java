@@ -107,11 +107,11 @@ public class Controller implements Initializable {
                 if (toggleGroupMenuCheckEncode.getSelectedToggle() != null) {
 
                     if (newValue == rButtEncodeUTF8) {
-                        LoadDataFromPropToView.setEncoding("UTF-8");
+                        LoadDataFromToProperties.setEncoding("UTF-8");
                     } else {
-                        LoadDataFromPropToView.setEncoding("UTF-16");
+                        LoadDataFromToProperties.setEncoding("UTF-16");
                     }
-                    log.info("Changed encoding to: " + LoadDataFromPropToView.getEncoding());
+                    log.info("Changed encoding to: " + LoadDataFromToProperties.getEncoding());
                 }
             }
         });
@@ -223,19 +223,16 @@ public class Controller implements Initializable {
     }
 
     private void swapExercisesFirstColumn(Exercises exerciseDragged, Exercises exerciseResult) {
-        String temp = exerciseDragged.getKey();
+        String keyDragged = exerciseDragged.getKey();
+        String keyResult = exerciseResult.getKey();
 
-        exerciseDragged.setKey(exerciseResult.getKey());
-        exerciseResult.setKey(temp);
+        exerciseDragged.setKey(keyResult);
+        exerciseResult.setKey(keyDragged);
 
         //TODO make swap logic in files
-        int sizeColumns = tableView.getColumns().size();
+//        int sizeColumns = tableView.getColumns().size();
 
-        if (sizeColumns == 2) {
-            System.out.println(currentFileForTable);
-        } else {
-            System.out.println(sizeColumns);
-        }
+        LoadDataFromToProperties.swapInFilesKeys(files, keyDragged, keyResult);
     }
 
     /**
@@ -303,7 +300,7 @@ public class Controller implements Initializable {
                     String key = string.getRowValue().getKey();
                     String newValue = string.getNewValue();
                     log.info("New value: " + newValue + "...For key: " + key);
-                    LoadDataFromPropToView.setPropToFile(currentFileForTable, key, newValue);
+                    LoadDataFromToProperties.setPropToFile(currentFileForTable, key, newValue);
 
                 } else {
                     String oldKey = string.getOldValue();
@@ -350,7 +347,7 @@ public class Controller implements Initializable {
                         showInformationAlert("Renamed:", alertInfoTextWereRenaimed);
 
                         //change key in all prop files
-                        LoadDataFromPropToView.changeKeyInAllFiles(tempFilesList, oldKey, newKey);
+                        LoadDataFromToProperties.changeKeyInAllFiles(tempFilesList, oldKey, newKey);
 //                     re init
                         initTable("all");
                     }
@@ -433,7 +430,7 @@ public class Controller implements Initializable {
             Map<String, String> dataFromProp = null;
 
             try {
-                dataFromProp = LoadDataFromPropToView.getDataFromProp(fileName);
+                dataFromProp = LoadDataFromToProperties.getDataFromProp(fileName);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -446,7 +443,9 @@ public class Controller implements Initializable {
                         add(entry.getValue());
                     }});
                 } else {
+
                     mapAll.get(key).add(entry.getValue());
+
                 }
             }
         }
@@ -460,7 +459,14 @@ public class Controller implements Initializable {
             if (resultFilesMap.containsKey(entry.getKey())) {
                 resultName = resultFilesMap.get(entry.getKey()).getName();
             }
+            if (entry.getValue().size() != nameColList.size()) {
+                LoadDataFromToProperties.checkContainIfNoAddKeyToAllFiles(files, entry.getKey(), entry.getValue(), "-");
+
+            }
+
             exercises.add(new ExerciseChild(entry.getKey(), entry.getValue(), nameColList, resultName));
+
+
         }
         System.out.println("cols: " + nameColList);
         return exercises;
@@ -506,7 +512,7 @@ public class Controller implements Initializable {
             }
         }
         try {
-            dataFromProp = LoadDataFromPropToView.getDataFromProp(fileForLoad.toString());
+            dataFromProp = LoadDataFromToProperties.getDataFromProp(fileForLoad.toString());
         } catch (IOException e) {
             e.printStackTrace();
             Alert alert = new Alert(Alert.AlertType.ERROR);

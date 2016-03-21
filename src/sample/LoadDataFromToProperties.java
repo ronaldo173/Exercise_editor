@@ -2,15 +2,12 @@ package sample;
 
 import java.io.*;
 import java.nio.charset.Charset;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.TreeMap;
+import java.util.*;
 
 /**
  * Created by Santer on 20.02.2016.
  */
-public class LoadDataFromPropToView {
+public class LoadDataFromToProperties {
     private static String encoding = "UTF-16";
 
     public static String getEncoding() {
@@ -18,7 +15,7 @@ public class LoadDataFromPropToView {
     }
 
     public static void setEncoding(String encoding) {
-        LoadDataFromPropToView.encoding = encoding;
+        LoadDataFromToProperties.encoding = encoding;
     }
 
     public static Map<String, String> getDataFromProp(String path) throws IOException {
@@ -72,6 +69,7 @@ public class LoadDataFromPropToView {
     private static void fixAndWritePropertiesToFileWithBrackets(Writer writer, OrderedProperties properties,
                                                                 File file) throws IOException {
 
+        System.out.println(file);
         if (properties.containsProperty("}")) {
             properties.removeProperty("}");
         }
@@ -80,12 +78,13 @@ public class LoadDataFromPropToView {
         if (file != null) {
             try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw")) {
                 StringBuilder forStart = new StringBuilder(file.getName().substring(0, file.getName().lastIndexOf(".")));
-//            String forStart = path.getName().substring(0, path.getName().lastIndexOf(".")) + "\r\n{\r\n";
                 randomAccessFile.seek(0);
                 randomAccessFile.write(forStart.append("\r\n{\r\n").toString().getBytes(Charset.forName(encoding)));
 
                 randomAccessFile.seek(randomAccessFile.length());
-                randomAccessFile.write("}".getBytes(Charset.forName(encoding)));
+
+                String tempEncoding = encoding.equalsIgnoreCase("utf-16") ? "UTF-16BE" : "UTF-8";
+                randomAccessFile.write("}".getBytes(tempEncoding));
             }
         }
 
@@ -121,9 +120,66 @@ public class LoadDataFromPropToView {
             properties.removeProperty(oldKey);
             properties.setProperty(newKey, value);
 
+            //and changeKey Color+key if exists
+            String colorOldKey = "Color" + oldKey;
+            String colorNewKey = null;
+            String colorValue = null;
+            if (properties.containsProperty(colorOldKey)) {
+                colorValue = properties.getProperty(colorOldKey);
+                colorNewKey = "Color" + newKey;
+                properties.removeProperty(colorOldKey);
+                properties.setProperty(colorNewKey, colorValue);
+                System.out.println("old key: " + oldKey + ". new key: " + newKey + "\nold color key: " + colorOldKey
+                        + " .new color key: " + colorNewKey);
+            }
+
             try (Writer writer = new OutputStreamWriter(new FileOutputStream(file), encoding)) {
-                properties.store(writer, null);
                 fixAndWritePropertiesToFileWithBrackets(writer, properties, file);
+            }
+        }
+    }
+
+
+    public static void swapInFilesKeys(File[] files, String keyDragged, String keyResult) {
+        List<File> fileList = new ArrayList<>(Arrays.asList(files));
+
+        changeKeyInAllFiles(fileList, keyResult, "temp_temp");
+        changeKeyInAllFiles(fileList, keyDragged, keyResult);
+        changeKeyInAllFiles(fileList, "temp_temp", keyDragged);
+    }
+
+
+    public static void checkContainIfNoAddKeyToAllFiles(File[] files, String key, List<String> valueList, String newValue) {
+        valueList.clear();
+
+        for (File file : files) {
+            try {
+                addKeyValueToFileIfNoExists(file, valueList, key, newValue);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private static void addKeyValueToFileIfNoExists(File file, List<String> valueList, String key, String newValue) throws IOException {
+
+        try (
+                Reader reader = new InputStreamReader(new FileInputStream(file), encoding)//with encoding
+        ) {
+            OrderedProperties.OrderedPropertiesBuilder builder = new OrderedProperties.OrderedPropertiesBuilder();
+            builder.withSuppressDateInComment(true);
+            OrderedProperties properties = builder.build();
+            properties.load(reader);
+
+            if (properties.containsProperty(key)) {
+                valueList.add(properties.getProperty(key));
+            } else {
+                properties.setProperty(key, newValue);
+                valueList.add(newValue);
+
+                try (Writer writer = new OutputStreamWriter(new FileOutputStream(file), encoding)) {
+                    fixAndWritePropertiesToFileWithBrackets(writer, properties, file);
+                }
             }
         }
     }
@@ -135,18 +191,7 @@ public class LoadDataFromPropToView {
         OrderedProperties properties = builder.build();
 
         File path = new File("resources\\languages\\Russian.cfg");
-        try (
-                Reader reader = new InputStreamReader(new FileInputStream(path), encoding)) {
-            properties.load(reader);
-        }
 
-        for (Map.Entry<String, String> entry : properties.entrySet()) {
-            System.out.println(entry.getKey() + " = " + entry.getValue());
-        }
-
-        properties.setProperty("menuNewExercise", "тестим новое");
-        try (Writer writer = new OutputStreamWriter(new FileOutputStream(path), encoding)) {
-            fixAndWritePropertiesToFileWithBrackets(writer, properties, path);
-        }
+        changeKeyInOneFile(path, "Exercise3", "Exercise3333");
     }
 }

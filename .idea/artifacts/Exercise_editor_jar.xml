@@ -1,0 +1,10 @@
+<component name="ArtifactManager">
+  <artifact type="jar" build-on-make="true" name="Exercise_editor:jar">
+    <output-path>$PROJECT_DIR$/../ExecutableFiles(OutPut)/Exercise_editor_V1.0</output-path>
+    <root id="archive" name="Exercise_editor.jar">
+      <element id="module-output" name="Exercise_editor" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/resources/controlsfx-8.40.10.jar" path-in-jar="/" />
+      <element id="library" level="project" name="controlsfx-8.40.10" />
+    </root>
+  </artifact>
+</component>
