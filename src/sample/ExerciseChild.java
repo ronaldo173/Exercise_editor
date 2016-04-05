@@ -16,6 +16,7 @@ public class ExerciseChild extends Exercises {
     private SimpleStringProperty French;
     private SimpleStringProperty Georgian;
     private SimpleStringProperty fileResult;
+    private int mySize = 0;
 
     public ExerciseChild(String key, String s, String s1, String s2, String s3) {
         this.key = new SimpleStringProperty(key);
@@ -27,6 +28,7 @@ public class ExerciseChild extends Exercises {
 
     public ExerciseChild(String key, List<String> entryValue, List<String> nameColumns, String resultName) {
         this.key = new SimpleStringProperty(key);
+        this.mySize = nameColumns.size();
 
 
         for (int i = 0; i < nameColumns.size(); i++) {
@@ -153,6 +155,11 @@ public class ExerciseChild extends Exercises {
 
     public SimpleStringProperty fileResultProperty() {
         return fileResult;
+    }
+
+    @Override
+    public int mySize() {
+        return mySize;
     }
 
     @Override

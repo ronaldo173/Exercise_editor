@@ -1,5 +1,9 @@
 package sample;
 
+import com.sun.javafx.scene.control.skin.TableViewSkin;
+import com.sun.javafx.scene.control.skin.VirtualFlow;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
@@ -12,7 +16,9 @@ import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTableCell;
@@ -23,6 +29,7 @@ import javafx.scene.text.Font;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import org.controlsfx.dialog.FontSelectorDialog;
 
 import java.io.*;
@@ -61,6 +68,8 @@ public class Controller implements Initializable {
     private Logger log = Logger.getLogger(Controller.class.getName());
     private Comparator<String> comparatorNaturalOrder;
     private File currentFileForTable = null;
+    private Timeline scrolltimeline = new Timeline();
+    private double scrollDirection = 0;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -117,7 +126,52 @@ public class Controller implements Initializable {
         });
 
         makeDragDropTableWithSwapFirstCol();
+        setupScrolling();
     }
+
+    private void setupScrolling() {
+        scrolltimeline.setCycleCount(Timeline.INDEFINITE);
+        scrolltimeline.getKeyFrames().add(new KeyFrame(Duration.millis(20), "Scoll", new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent ActionEvent) {
+                dragScroll();
+            }
+        }));
+        tableView.setOnDragExited(event -> {
+
+            //fixed with getting visible rows
+            double directionScroll = event.getY() > 0 ? 1.0 : -1.0;
+            scrollDirection = directionScroll / (getNumberOfVisibleRows() * 5);
+            scrolltimeline.play();
+        });
+        tableView.setOnDragEntered(event -> scrolltimeline.stop());
+        tableView.setOnDragDone(event -> scrolltimeline.stop());
+
+    }
+
+    private void dragScroll() {
+        ScrollBar sb = getVerticalScrollbar();
+        if (sb != null) {
+            double newValue = sb.getValue() + scrollDirection;
+            newValue = Math.min(newValue, 1.0);
+            newValue = Math.max(newValue, 0.0);
+            sb.setValue(newValue);
+        }
+    }
+
+    private ScrollBar getVerticalScrollbar() {
+        ScrollBar result = null;
+        for (Node n : tableView.lookupAll(".scroll-bar")) {
+            if (n instanceof ScrollBar) {
+                ScrollBar bar = (ScrollBar) n;
+                if (bar.getOrientation().equals(Orientation.VERTICAL)) {
+                    result = bar;
+                }
+            }
+        }
+        return result;
+    }
+
 
     private File initCurrentOpenFile(String nameOfLanguage) {
 
@@ -173,13 +227,7 @@ public class Controller implements Initializable {
                 }
             });
 
-            row.setOnDragExited(new EventHandler<DragEvent>() {
-                @Override
-                public void handle(DragEvent event) {
-                    row.setStyle("");
-
-                }
-            });
+            row.setOnDragExited(event -> row.setStyle(""));
 
 
             row.setOnDragOver(event -> {
@@ -217,22 +265,31 @@ public class Controller implements Initializable {
                     event.consume();
                 }
             });
+//            initTable("all");
 
             return row;
         });
     }
 
     private void swapExercisesFirstColumn(Exercises exerciseDragged, Exercises exerciseResult) {
-        String keyDragged = exerciseDragged.getKey();
-        String keyResult = exerciseResult.getKey();
 
-        exerciseDragged.setKey(keyResult);
-        exerciseResult.setKey(keyDragged);
 
         //TODO make swap logic in files
-//        int sizeColumns = tableView.getColumns().size();
 
-        LoadDataFromToProperties.swapInFilesKeys(files, keyDragged, keyResult);
+//        LoadDataFromToProperties.swapInFilesKeys(files, keyDragged, keyResult);
+
+        if (exerciseDragged.mySize() > 2) {
+            showInformationAlert("Swap alert, do it not in 'ALL' column!", "!");
+        } else {
+            String valueDragged = exerciseDragged.getValue();
+
+            //edited to change make change in all files
+            LoadDataFromToProperties.swapKeyInFileAndSwapLessonsWithResults(files, pathToLessons,
+                    exerciseDragged, exerciseResult);
+
+            initTable(toggleGroup.getSelectedToggle().getUserData().toString());
+        }
+
     }
 
     /**
@@ -385,9 +442,6 @@ public class Controller implements Initializable {
         }
         tableView.setItems(data);
         tableView.getSortOrder().add(tableView.getColumns().get(0));
-        for (TableColumn<Exercises, ?> column : tableView.getColumns()) {
-            column.setStyle("-fx-alignment: CENTER;");
-        }
 
         /**
          *natural sort of table
@@ -465,7 +519,6 @@ public class Controller implements Initializable {
             }
 
             exercises.add(new ExerciseChild(entry.getKey(), entry.getValue(), nameColList, resultName));
-
 
         }
         System.out.println("cols: " + nameColList);
@@ -579,6 +632,7 @@ public class Controller implements Initializable {
             log.log(Level.WARNING, "No directory chosen");
         } else {
             pathToLessons = chosenDirectory.getAbsolutePath();
+            LoadDataFromToProperties.loadLastPathToLessons(pathToLessons);
             initNewFiles();
         }
     }
@@ -751,4 +805,23 @@ public class Controller implements Initializable {
         }
         return buttonList;
     }
+
+    public void onClickAddExerciseMenu(ActionEvent actionEvent) {
+        initTable("all");
+        toggleGroup.selectToggle(toggleGroup.getToggles().get(toggleGroup.getToggles().size() - 1));
+
+        System.out.println("add..pressed");
+        showInformationAlert("it will be soon", "visible rows: " + getNumberOfVisibleRows());
+    }
+
+    private int getNumberOfVisibleRows() {
+        VirtualFlow<?> vf = loadVirtualFlow();
+        return vf.getLastVisibleCell().getIndex() - vf.getFirstVisibleCell().getIndex();
+    }
+
+
+    private VirtualFlow<?> loadVirtualFlow() {
+        return (VirtualFlow<?>) ((TableViewSkin<?>) tableView.getSkin()).getChildren().get(1);
+    }
+
 }

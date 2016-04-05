@@ -41,6 +41,10 @@ public class Exercises {
         return value;
     }
 
+    public int mySize() {
+        return 2;
+    }
+
     @Override
     public String toString() {
         return "Exercises{" +

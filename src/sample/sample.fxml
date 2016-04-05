@@ -41,7 +41,12 @@
                                 <RadioMenuItem text="UNICODE (UTF-16)" selected="true"
                                                toggleGroup="$toggleGroupMenuCheckEncode"
                                 />
+                            </items>
+                        </Menu>
 
+                        <Menu text="Add exercise...">
+                            <items>
+                                <MenuItem onAction="#onClickAddExerciseMenu" text="add exercise"/>
                             </items>
                         </Menu>
 
@@ -74,6 +79,11 @@
                             </columnResizePolicy>
                         </TableView>
                     </center>
+
+                    <bottom>
+                        <HBox prefHeight="15.0" BorderPane.alignment="BOTTOM_CENTER">
+                        </HBox>
+                    </bottom>
                 </BorderPane>
             </children>
         </VBox>
