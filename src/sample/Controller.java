@@ -25,10 +25,12 @@ import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.image.Image;
 import javafx.scene.input.*;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 import javafx.util.Duration;
 import org.controlsfx.dialog.FontSelectorDialog;
 
@@ -127,7 +129,9 @@ public class Controller implements Initializable {
 
         makeDragDropTableWithSwapFirstCol();
         setupScrolling();
+
     }
+
 
     private void setupScrolling() {
         scrolltimeline.setCycleCount(Timeline.INDEFINITE);
@@ -439,6 +443,7 @@ public class Controller implements Initializable {
 
             //now make first column editable with saving to all files
             keyColumn.setCellFactory(TextFieldTableCell.forTableColumn());
+
         }
         tableView.setItems(data);
         tableView.getSortOrder().add(tableView.getColumns().get(0));
@@ -453,6 +458,7 @@ public class Controller implements Initializable {
 
         keyColumn.setSortType(TableColumn.SortType.ASCENDING);
         tableView.getSortOrder().addAll(keyColumn);
+        Main.getStage().setTitle("Editor. Path to lessons: " + pathToLessons);
 
     }
 
@@ -791,12 +797,12 @@ public class Controller implements Initializable {
             }
         }
 
-        if (files.length > 1) {
-            RadioButton radioButtonAll = new RadioButton("All");
+
+        RadioButton radioButtonAll = new RadioButton("All");
             radioButtonAll.setUserData("All");
             buttonList.add(radioButtonAll);
             hBoxForRBut.getChildren().add(radioButtonAll);
-        }
+
 
         for (RadioButton button : buttonList) {
             button.setPadding(new Insets(10, 30, 10, 0));

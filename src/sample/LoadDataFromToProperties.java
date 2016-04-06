@@ -10,7 +10,7 @@ import java.util.*;
  * Created by Santer on 20.02.2016.
  */
 public class LoadDataFromToProperties {
-    private static String encoding = "UTF-16";
+    private static String encoding = "UTF-16LE";
 
     public static String getEncoding() {
         return encoding;
@@ -23,7 +23,7 @@ public class LoadDataFromToProperties {
     public static Map<String, String> getDataFromProp(String path) throws IOException {
         Map<String, String> map = new TreeMap<>();
         Properties properties = new Properties();
-        try (Reader reader = new InputStreamReader(new FileInputStream(path), encoding);//with encoding
+        try (Reader reader = new InputStreamReader(new FileInputStream(path), encoding)//with encoding
         ) {
             properties.load(reader);
 
@@ -73,17 +73,21 @@ public class LoadDataFromToProperties {
         if (properties.containsProperty("}")) {
             properties.removeProperty("}");
         }
+        if (properties.containsProperty("{")) {
+            properties.removeProperty("{");
+        }
+
+
         properties.store(writer, null);
 
         if (file != null) {
             try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw")) {
                 StringBuilder forStart = new StringBuilder(file.getName().substring(0, file.getName().lastIndexOf(".")));
                 randomAccessFile.seek(0);
-                randomAccessFile.write(forStart.append("\r\n{\r\n").toString().getBytes(Charset.forName(encoding)));
+                randomAccessFile.write(forStart.append("\r\n{").toString().getBytes(Charset.forName(encoding)));
 
                 randomAccessFile.seek(randomAccessFile.length());
-                String tempEncoding = encoding.equalsIgnoreCase("utf-16") ? "UTF-16BE" : "UTF-8";
-                randomAccessFile.write("}".getBytes(tempEncoding));
+                randomAccessFile.write("}".getBytes(encoding));
             }
         }
 
@@ -128,8 +132,6 @@ public class LoadDataFromToProperties {
                 colorNewKey = "Color" + newKey;
                 properties.removeProperty(colorOldKey);
                 properties.setProperty(colorNewKey, colorValue);
-//                System.out.println("old key: " + oldKey + ". new key: " + newKey + "\nold color key: " + colorOldKey
-//                        + " .new color key: " + colorNewKey);
             }
 
             try (Writer writer = new OutputStreamWriter(new FileOutputStream(file), encoding)) {
@@ -214,16 +216,11 @@ public class LoadDataFromToProperties {
         System.out.println("\n swap keys: " + exerciseResult.getKey());
         for (File file : currentFileForTable) {
 
-
-//            setPropToFile(file, exerciseDragged.getKey(), exerciseResult.getValue());
-//            setPropToFile(file, exerciseResult.getKey(), exerciseDragged.getValue());
-
             try {
                 swapValueInFile(file, exerciseDragged.getKey(), exerciseResult.getKey());
             } catch (Exception e) {
                 e.printStackTrace();
             }
-
         }
 
         try {
@@ -231,8 +228,6 @@ public class LoadDataFromToProperties {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-
     }
 
     private static void swapValueInFile(File file, String key1, String key2) throws Exception {
@@ -243,6 +238,7 @@ public class LoadDataFromToProperties {
             builder.withSuppressDateInComment(true);
             OrderedProperties properties = builder.build();
             properties.load(reader);
+            int size = properties.size();
 
             String value1 = properties.getProperty(key1);
             String value2 = properties.getProperty(key2);
@@ -312,12 +308,16 @@ public class LoadDataFromToProperties {
     }
 
     public static void main(String[] args) throws IOException {
-        OrderedProperties.OrderedPropertiesBuilder builder = new OrderedProperties.OrderedPropertiesBuilder();
-        builder.withSuppressDateInComment(true);
-        OrderedProperties properties = builder.build();
+//        OrderedProperties.OrderedPropertiesBuilder builder = new OrderedProperties.OrderedPropertiesBuilder();
+//        builder.withSuppressDateInComment(true);
+//        OrderedProperties properties = builder.build();
 
-        File path = new File("resources\\languages\\Russian.cfg");
+        File path = new File("resources\\languages\\Ukraine.cfg");
 
-        changeKeyInOneFile(path, "Exercise3", "Exercise3333");
+        try {
+            swapValueInFile(path, "Exercise0", "Exercise1");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
